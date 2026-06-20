@@ -75,10 +75,25 @@ WSGI_APPLICATION = 'crm_erp.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+import os
+import shutil
+
+# Vercel Read-Only Database Workaround
+# Since Vercel is serverless, the filesystem is read-only.
+# We copy the database to /tmp/ which is writable, allowing the ERP to function.
+# Note: Data resets when the Vercel serverless function spins down (ephemeral).
+if os.environ.get('VERCEL') == '1' or os.environ.get('VERCEL_URL'):
+    TMP_DB_PATH = '/tmp/db.sqlite3'
+    if not os.path.exists(TMP_DB_PATH):
+        shutil.copy2(BASE_DIR / 'db.sqlite3', TMP_DB_PATH)
+    DB_NAME = TMP_DB_PATH
+else:
+    DB_NAME = BASE_DIR / 'db.sqlite3'
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': DB_NAME,
     }
 }
 
