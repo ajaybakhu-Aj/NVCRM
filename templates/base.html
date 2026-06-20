@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>Nightvision HQ - Unified Landing Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #031427;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 16px;
+        }
+        .zebra-table tr:nth-child(even) {
+            background-color: #102034;
+        }
+        .zebra-table tr:nth-child(odd) {
+            background-color: #031427;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#26364a",
+                        "tertiary-container": "#d7e2fa",
+                        "on-tertiary": "#263143",
+                        "tertiary": "#fffeff",
+                        "on-error": "#690005",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "on-secondary-container": "#adb4ce",
+                        "surface-tint": "#a4d64c",
+                        "surface-container-highest": "#26364a",
+                        "surface-dim": "#031427",
+                        "error-container": "#93000a",
+                        "secondary-container": "#3f465c",
+                        "on-background": "#d3e4fe",
+                        "secondary-fixed": "#dae2fd",
+                        "on-error-container": "#ffdad6",
+                        "surface": "#031427",
+                        "on-primary-fixed-variant": "#354e00",
+                        "on-primary-fixed": "#131f00",
+                        "surface-bright": "#2a3a4f",
+                        "primary-fixed-dim": "#a4d64c",
+                        "primary": "#fefff1",
+                        "background": "#031427",
+                        "on-tertiary-container": "#596479",
+                        "secondary": "#bec6e0",
+                        "on-tertiary-fixed": "#111c2d",
+                        "inverse-on-surface": "#213145",
+                        "tertiary-fixed": "#d8e3fb",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "on-secondary-fixed": "#131b2e",
+                        "surface-container-high": "#1b2b3f",
+                        "outline-variant": "#434938",
+                        "primary-fixed": "#bff365",
+                        "tertiary-fixed-dim": "#bcc7de",
+                        "surface-container": "#102034",
+                        "on-secondary": "#283044",
+                        "on-primary": "#233600",
+                        "surface-container-lowest": "#000f21",
+                        "on-surface-variant": "#c3c9b2",
+                        "inverse-surface": "#d3e4fe",
+                        "error": "#ffb4ab",
+                        "on-surface": "#d3e4fe",
+                        "on-tertiary-fixed-variant": "#3c475a",
+                        "inverse-primary": "#476800",
+                        "outline": "#8d937e",
+                        "primary-container": "#bef264",
+                        "surface-container-low": "#0b1c30",
+                        "on-primary-container": "#4b6e00"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "compact-row": "32px",
+                        "sidebar-width": "260px",
+                        "header-height": "64px",
+                        "standard-row": "44px",
+                        "gutter-grid": "16px",
+                        "unit": "4px",
+                        "container-padding": "24px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "tabular-numeric": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "label-bold": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "headline-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "tabular-numeric": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "label-bold": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  {% block head %}{% endblock head %}
+  </head>
+<body class="bg-background text-on-surface font-body-md" hx-boost="true">
+<!-- Navigation Drawer -->
+<aside id="mobile-sidebar" class="hidden md:flex fixed left-0 top-0 h-full w-sidebar-width bg-surface-container border-r border-outline-variant flex-col z-50 transition-transform duration-300">
+<div class="p-container-padding">
+<h1 class="font-headline-md text-headline-md text-primary-fixed tracking-tight">GLOBAL WORKSPACE</h1>
+</div>
+<nav class="flex-1 overflow-y-auto px-2 space-y-1">
+{% if not system_user or system_user.can_access_dashboard %}
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant font-body-md text-body-md hover:bg-surface-variant transition-colors" href="{% url 'dashboard' %}">
+<span class="material-symbols-outlined">dashboard</span> Dashboard
+</a>
+{% endif %}
+{% if not system_user or system_user.can_access_notice_board %}
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant font-body-md text-body-md hover:bg-surface-variant transition-colors" href="{% url 'notice_board' %}">
+<span class="material-symbols-outlined">campaign</span> Notice Board
+</a>
+{% endif %}
+{% if not system_user or system_user.can_access_time_attendance %}
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant font-body-md text-body-md hover:bg-surface-variant transition-colors" href="{% url 'attendance_checkin' %}">
+<span class="material-symbols-outlined">schedule</span> Time & Attendance
+</a>
+{% endif %}
+{% if not system_user or system_user.can_access_leave %}
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant font-body-md text-body-md hover:bg-surface-variant transition-colors" href="{% url 'leave_list' %}">
+<span class="material-symbols-outlined">event_busy</span> Leave
+</a>
+{% endif %}
+{% if not system_user or system_user.can_access_profiles %}
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant font-body-md text-body-md hover:bg-surface-variant transition-colors" href="{% url 'user_create' %}">
+<span class="material-symbols-outlined">badge</span> Profiles
+</a>
+{% endif %}
+{% if not system_user or system_user.can_access_lead_pipeline %}
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant font-body-md text-body-md hover:bg-surface-variant transition-colors" href="{% url 'lead_pipeline' %}">
+<span class="material-symbols-outlined">filter_list</span> Lead Pipeline
+</a>
+{% endif %}
+{% if not system_user or system_user.can_access_inventory %}
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant font-body-md text-body-md hover:bg-surface-variant transition-colors" href="{% url 'inventory_list' %}">
+<span class="material-symbols-outlined">inventory_2</span> Inventory
+</a>
+{% endif %}
+{% if not system_user or system_user.can_access_accounts_receivable %}
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant font-body-md text-body-md hover:bg-surface-variant transition-colors" href="{% url 'accounts_receivable' %}">
+<span class="material-symbols-outlined">payments</span> Accounts Receivable
+</a>
+{% endif %}
+{% if not system_user or system_user.can_access_pos %}
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant font-body-md text-body-md hover:bg-surface-variant transition-colors" href="{% url 'pos' %}">
+<span class="material-symbols-outlined">point_of_sale</span> Point of Sale
+</a>
+{% endif %}
+{% if not system_user or system_user.can_access_procurement %}
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant font-body-md text-body-md hover:bg-surface-variant transition-colors" href="{% url 'procurement_list' %}">
+<span class="material-symbols-outlined">shopping_cart</span> Procurement
+</a>
+{% endif %}
+</nav>
+<div class="p-4 border-t border-outline-variant bg-surface-container-low">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            {% if request.session.profile_image %}
+            <img src="{{ request.session.profile_image }}" class="w-10 h-10 rounded-full object-cover border border-outline-variant shadow-sm" alt="Profile Image">
+            {% else %}
+            <div class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold">
+                {{ request.session.logged_in_name|default:"G"|make_list|first|upper }}
+            </div>
+            {% endif %}
+            <div>
+                <p class="font-label-bold text-label-bold text-on-surface">{{ request.session.logged_in_name|default:"Guest User" }}</p>
+                <p class="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">{{ request.session.active_role|default:"Unassigned" }}</p>
+            </div>
+        </div>
+        <a href="{% url 'logout' %}" class="material-symbols-outlined text-outline hover:text-error transition-colors p-2" title="Logout">logout</a>
+    </div>
+</div>
+</aside>
+<!-- Top App Bar -->
+<header class="fixed top-0 right-0 w-full md:w-[calc(100%-260px)] h-header-height bg-surface border-b border-outline-variant flex justify-between items-center px-4 md:px-container-padding z-40">
+<div class="flex items-center gap-4">
+<button onclick="document.getElementById('mobile-sidebar').classList.toggle('hidden'); document.getElementById('mobile-sidebar').classList.toggle('flex');" class="md:hidden material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors cursor-pointer">menu</button>
+<span class="hidden md:inline-block material-symbols-outlined text-primary-fixed">hub</span>
+<h2 class="font-headline-sm text-headline-sm font-bold text-primary-fixed">Nightvision HQ</h2>
+<span class="hidden md:inline-block px-2 py-0.5 rounded bg-surface-variant text-[10px] font-bold text-on-surface-variant uppercase tracking-widest border border-outline">Admin Role</span>
+</div>
+<div class="flex items-center gap-3 md:gap-6">
+<div class="relative group">
+<a href="{% url 'procurement_list' %}" class="flex items-center gap-2 bg-surface-container px-3 py-1.5 rounded border border-outline-variant hover:bg-surface-variant transition-all cursor-pointer">
+<span class="material-symbols-outlined text-[20px]">fact_check</span>
+<span class="font-label-bold text-label-bold">Approvals</span>
+{% if pending_approvals_count > 0 %}
+<span class="bg-error text-on-error rounded-full px-1.5 text-[10px] font-bold">{{ pending_approvals_count }}</span>
+{% endif %}
+</a>
+</div>
+<div class="flex items-center gap-4">
+<!-- Search Wrapper -->
+<div class="relative">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary-fixed transition-colors" onclick="document.getElementById('universal-search').classList.toggle('hidden'); document.getElementById('search-input').focus();">search</button>
+<!-- Hidden Search Input -->
+<div id="universal-search" class="hidden absolute top-full right-0 mt-4 w-64 bg-surface-container-high border border-outline-variant rounded-lg shadow-xl overflow-hidden z-50">
+<input type="text" id="search-input" placeholder="Search system modules..." class="w-full bg-transparent text-on-surface px-4 py-3 text-sm outline-none border-none focus:ring-0">
+</div>
+</div>
+<!-- Notifications Wrapper -->
+<div class="relative">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary-fixed transition-colors" onclick="document.getElementById('notifications-menu').classList.toggle('hidden')">notifications</button>
+{% if pending_approvals_count > 0 %}
+<span class="absolute top-0 right-0 w-2 h-2 bg-error rounded-full border border-surface pointer-events-none"></span>
+{% endif %}
+<!-- Hidden Notifications Dropdown -->
+<div id="notifications-menu" class="hidden absolute top-full right-0 mt-4 w-72 bg-surface-container-high border border-outline-variant rounded-lg shadow-2xl z-50">
+    <div class="p-3 border-b border-outline-variant flex justify-between items-center bg-surface-container">
+        <h4 class="font-label-bold text-on-surface uppercase tracking-wider text-xs">Notifications</h4>
+        {% if pending_approvals_count > 0 %}<span class="text-[9px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">{{ pending_approvals_count }} New</span>{% endif %}
+    </div>
+    <div class="max-h-64 overflow-y-auto">
+        {% if pending_procurements_count > 0 %}
+        <a href="{% url 'procurement_list' %}" class="block p-4 border-b border-outline-variant hover:bg-surface-variant transition-colors">
+            <div class="flex items-center gap-2 mb-1">
+                <span class="material-symbols-outlined text-primary text-[14px]">shopping_cart</span>
+                <p class="text-xs text-on-surface font-semibold">Procurement Request</p>
+            </div>
+            <p class="text-[10px] text-on-surface-variant">{{ pending_procurements_count }} Procurement requests awaiting your approval.</p>
+        </a>
+        {% endif %}
+        {% if pending_leaves_count > 0 %}
+        <a href="{% url 'leave_list' %}" class="block p-4 hover:bg-surface-variant transition-colors">
+            <div class="flex items-center gap-2 mb-1">
+                <span class="material-symbols-outlined text-error text-[14px]">event_busy</span>
+                <p class="text-xs text-on-surface font-semibold">Leave Verification</p>
+            </div>
+            <p class="text-[10px] text-on-surface-variant">{{ pending_leaves_count }} Leave requests awaiting your review.</p>
+        </a>
+        {% endif %}
+        {% if pending_approvals_count == 0 %}
+        <div class="p-4 text-center">
+             <p class="text-[10px] text-on-surface-variant italic">No new notifications.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+</div>
+<a href="{% url 'user_create' %}" class="material-symbols-outlined text-on-surface-variant hover:text-primary-fixed transition-colors" title="Edit Profile Details">settings</a>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="ml-0 md:ml-sidebar-width pt-header-height min-h-screen bg-background pb-20 md:pb-0">
+<div class="p-4 md:p-container-padding">
+{% block content %}{% endblock content %}
+</div>
+</main>
+<!-- Bottom Nav Bar (Mobile only) -->
+<footer class="fixed bottom-0 left-0 w-full md:hidden bg-surface-container-lowest border-t border-outline-variant z-50 flex justify-around items-center h-compact-row shadow-lg pb-safe">
+<a href="{% url 'dashboard' %}" class="flex flex-col items-center justify-center {% if request.resolver_match.url_name == 'dashboard' %}bg-primary-container text-on-primary-container rounded-full px-4 py-1{% else %}text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-200{% endif %}">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[8px] font-label-bold">Home</span>
+</a>
+<a href="{% url 'lead_pipeline' %}" class="flex flex-col items-center justify-center {% if request.resolver_match.url_name == 'lead_pipeline' %}bg-primary-container text-on-primary-container rounded-full px-4 py-1{% else %}text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-200{% endif %}">
+<span class="material-symbols-outlined">leaderboard</span>
+<span class="text-[8px] font-label-bold">Leads</span>
+</a>
+<a href="{% url 'inventory_list' %}" class="flex flex-col items-center justify-center {% if request.resolver_match.url_name == 'inventory_list' %}bg-primary-container text-on-primary-container rounded-full px-4 py-1{% else %}text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-200{% endif %}">
+<span class="material-symbols-outlined">precision_manufacturing</span>
+<span class="text-[8px] font-label-bold">ERP</span>
+</a>
+<a href="{% url 'attendance_checkin' %}" class="flex flex-col items-center justify-center {% if request.resolver_match.url_name == 'attendance_checkin' %}bg-primary-container text-on-primary-container rounded-full px-4 py-1{% else %}text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-200{% endif %}">
+<span class="material-symbols-outlined">task_alt</span>
+<span class="text-[8px] font-label-bold">Tasks</span>
+</a>
+<a href="{% url 'user_create' %}" class="flex flex-col items-center justify-center {% if request.resolver_match.url_name == 'user_create' %}bg-primary-container text-on-primary-container rounded-full px-4 py-1{% else %}text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-200{% endif %}">
+<span class="material-symbols-outlined">account_circle</span>
+<span class="text-[8px] font-label-bold">User</span>
+</a>
+</footer>
+<script>
+        // Clock functionality
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour12: true, 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit' 
+            });
+            document.getElementById('live-clock').textContent = timeString;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Check-in Toggle functionality
+        let isCheckedIn = false;
+        function toggleCheck() {
+            const btn = document.getElementById('checkActionBtn');
+            const btnText = document.getElementById('btnText');
+            const btnIcon = document.getElementById('btnIcon');
+            const lastAct = document.getElementById('last-activity');
+            const now = new Date();
+            const timestamp = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+            isCheckedIn = !isCheckedIn;
+
+            if (isCheckedIn) {
+                btnText.textContent = 'Check Out';
+                btnIcon.textContent = 'logout';
+                btn.classList.remove('bg-primary-container', 'text-on-primary-container');
+                btn.classList.add('bg-surface-variant', 'text-on-surface-variant', 'border', 'border-outline');
+                lastAct.textContent = timestamp + ' Today (Checked In)';
+            } else {
+                btnText.textContent = 'Check In';
+                btnIcon.textContent = 'login';
+                btn.classList.add('bg-primary-container', 'text-on-primary-container');
+                btn.classList.remove('bg-surface-variant', 'text-on-surface-variant', 'border', 'border-outline');
+                lastAct.textContent = timestamp + ' Today (Checked Out)';
+            }
+        }
+
+        // Active State Navigation
+        function setActiveNav() {
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('aside nav a');
+            
+            navLinks.forEach(link => {
+                const linkPath = link.getAttribute('href');
+                if (linkPath && linkPath !== '#' && currentPath === linkPath) {
+                    link.className = "flex items-center gap-3 px-4 py-2 bg-secondary-container text-on-secondary-container border-l-2 border-primary-fixed font-body-md text-body-md transition-colors";
+                } else {
+                    link.className = "flex items-center gap-3 px-4 py-2 text-on-surface-variant font-body-md text-body-md hover:bg-surface-variant transition-colors";
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', setActiveNav);
+        document.addEventListener('htmx:afterSettle', setActiveNav);
+    </script>
+    <!-- Global Delete Confirmation Modal -->
+<div id="globalDeleteModal" class="hidden fixed inset-0 z-[100] bg-scrim/80 backdrop-blur-sm flex items-center justify-center opacity-0 transition-opacity duration-300">
+    <div class="bg-surface-container border border-outline-variant w-11/12 md:w-96 rounded-3xl overflow-hidden shadow-2xl transform scale-95 transition-transform duration-300" id="globalDeleteModalCard">
+        <div class="px-6 pt-6 pb-4 border-b border-outline-variant flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full bg-error-container/30 flex items-center justify-center text-error">
+                <span class="material-symbols-outlined text-3xl">warning</span>
+            </div>
+            <div>
+                <h3 class="font-headline-md text-headline-md text-on-surface" id="deleteModalTitle">Confirm Deletion</h3>
+                <p class="text-on-surface-variant text-sm mt-1" id="deleteModalMessage">Are you sure you want to permanently delete this item? This action cannot be undone.</p>
+            </div>
+        </div>
+        <div class="px-6 py-4 bg-surface-container-low flex justify-end gap-3">
+            <button type="button" onclick="closeDeleteModal()" class="px-5 py-2 rounded-full font-label-bold text-on-surface-variant hover:bg-surface-variant transition-colors">Cancel</button>
+            <form id="globalDeleteForm" method="POST" action="">
+                {% csrf_token %}
+                <button type="submit" class="px-5 py-2 rounded-full bg-error text-on-error font-label-bold hover:brightness-110 transition-colors shadow-lg shadow-error/20 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm">delete</span> Delete Forever
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(url, title = 'Confirm Deletion', message = 'Are you sure you want to permanently delete this item? This action cannot be undone.', extraInputs = {}) {
+    const form = document.getElementById('globalDeleteForm');
+    form.action = url;
+    document.getElementById('deleteModalTitle').innerText = title;
+    document.getElementById('deleteModalMessage').innerText = message;
+    
+    // Clear any previous dynamically added inputs
+    Array.from(form.querySelectorAll('input[type="hidden"]:not([name="csrfmiddlewaretoken"])')).forEach(el => el.remove());
+    
+    // Append new hidden inputs for the specific delete action
+    for (const [key, value] of Object.entries(extraInputs)) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = value;
+        form.appendChild(input);
+    }
+    
+    const modal = document.getElementById('globalDeleteModal');
+    const card = document.getElementById('globalDeleteModalCard');
+    
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        card.classList.remove('scale-95');
+        card.classList.add('scale-100');
+    }, 10);
+}
+
+function closeDeleteModal() {
+    const modal = document.getElementById('globalDeleteModal');
+    const card = document.getElementById('globalDeleteModalCard');
+    
+    modal.classList.add('opacity-0');
+    card.classList.remove('scale-100');
+    card.classList.add('scale-95');
+    
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 300);
+}
+</script>
+
+{% block scripts %}{% endblock scripts %}
+</body></html>

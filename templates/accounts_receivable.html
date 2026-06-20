@@ -1,0 +1,410 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Header -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
+    <div>
+        <h3 class="font-headline-lg text-headline-lg text-on-surface">Accounts Receivable Ledger</h3>
+        <p class="text-on-surface-variant font-body-md mt-1">Real-time tracking, reconciliation, and status management of customer invoices.</p>
+    </div>
+    <div class="flex gap-2">
+        <button onclick="openCreateModal()" class="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-bold text-label-bold flex items-center gap-2 hover:scale-95 transition-transform cursor-pointer">
+            <span class="material-symbols-outlined text-lg">add_card</span>
+            NEW INVOICE
+        </button>
+    </div>
+</div>
+
+<!-- Financial KPIs -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="bg-surface-container border border-outline-variant p-4 rounded-xl flex items-center gap-4">
+        <div class="w-10 h-10 rounded bg-tertiary-fixed/10 flex items-center justify-center text-secondary">
+            <span class="material-symbols-outlined">payments</span>
+        </div>
+        <div>
+            <p class="text-[10px] text-outline font-label-caps uppercase tracking-wider">Total Invoiced</p>
+            <h4 class="font-headline-md text-headline-md text-on-surface mt-0.5">Rs. {{ total_invoiced|floatformat:2 }}</h4>
+        </div>
+    </div>
+    <div class="bg-surface-container border border-outline-variant p-4 rounded-xl flex items-center gap-4">
+        <div class="w-10 h-10 rounded bg-primary-container/10 flex items-center justify-center text-primary-fixed">
+            <span class="material-symbols-outlined">check_circle</span>
+        </div>
+        <div>
+            <p class="text-[10px] text-outline font-label-caps uppercase tracking-wider">Settled Amount</p>
+            <h4 class="font-headline-md text-headline-md text-on-surface mt-0.5">Rs. {{ total_settled|floatformat:2 }}</h4>
+        </div>
+    </div>
+    <div class="bg-surface-container border border-outline-variant p-4 rounded-xl flex items-center gap-4">
+        <div class="w-10 h-10 rounded bg-secondary-container/20 flex items-center justify-center text-secondary">
+            <span class="material-symbols-outlined">pending</span>
+        </div>
+        <div>
+            <p class="text-[10px] text-outline font-label-caps uppercase tracking-wider">Outstanding</p>
+            <h4 class="font-headline-md text-headline-md text-on-surface mt-0.5">Rs. {{ total_receivables|floatformat:2 }}</h4>
+        </div>
+    </div>
+    <div class="bg-surface-container border border-outline-variant p-4 rounded-xl flex items-center gap-4">
+        <div class="w-10 h-10 rounded bg-error-container/20 flex items-center justify-center text-error">
+            <span class="material-symbols-outlined">warning</span>
+        </div>
+        <div>
+            <p class="text-[10px] text-outline font-label-caps uppercase tracking-wider">Critical Past Due</p>
+            <h4 class="font-headline-md text-headline-md text-error mt-0.5">Rs. {{ critical_past_due|floatformat:2 }}</h4>
+        </div>
+    </div>
+</div>
+
+<!-- Invoices Section -->
+<div class="bg-surface-container-low rounded-xl border border-outline-variant overflow-hidden mb-8">
+    <div class="px-6 py-4 bg-surface-container-high border-b border-outline-variant flex flex-wrap justify-between items-center gap-4">
+        <span class="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider">Ledger Invoices</span>
+        <div class="flex gap-4 items-center">
+            <div class="flex items-center gap-2 text-xs">
+                <span class="w-2.5 h-2.5 rounded-full bg-primary-fixed"></span>
+                <span class="text-on-surface">Settled</span>
+            </div>
+            <div class="flex items-center gap-2 text-xs">
+                <span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
+                <span class="text-on-surface">Partially Paid</span>
+            </div>
+            <div class="flex items-center gap-2 text-xs">
+                <span class="w-2.5 h-2.5 rounded-full bg-error"></span>
+                <span class="text-on-surface">Unpaid</span>
+            </div>
+            <div class="flex items-center gap-2 text-xs">
+                <span class="w-2.5 h-2.5 rounded-full bg-outline"></span>
+                <span class="text-on-surface">Disputed</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse whitespace-nowrap">
+            <thead>
+                <tr class="text-on-surface-variant uppercase font-label-bold text-[10px] tracking-[0.1em] border-b border-outline-variant">
+                    <th class="px-6 py-4">Short ID</th>
+                    <th class="px-6 py-4">Invoice ID</th>
+                    <th class="px-6 py-4">Client Name</th>
+                    <th class="px-6 py-4">Amount Due</th>
+                    <th class="px-6 py-4">Due Date</th>
+                    <th class="px-6 py-4">Reconciliation</th>
+                    <th class="px-6 py-4 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="font-tabular-numeric text-body-md text-on-surface">
+                {% for invoice in invoices %}
+                <tr class="zebra-stripe hover:bg-surface-variant transition-colors border-b border-outline-variant/30">
+                    <td class="px-6 py-4 text-on-surface-variant">ar-{{ invoice.id|stringformat:"04d" }}</td>
+                    <td class="px-6 py-4 font-bold">{{ invoice.invoice_number }}</td>
+                    <td class="px-6 py-4">{{ invoice.customer_name }}</td>
+                    <td class="px-6 py-4">
+                        <div class="flex flex-col">
+                            {% if invoice.state == 'Partially_Paid' %}
+                            <span class="font-bold text-on-surface">Rs. {{ invoice.amount_due|floatformat:2 }}</span>
+                            <span class="text-[10px] text-secondary font-label-bold">Paid: Rs. {{ invoice.amount_paid|floatformat:2 }} | Due: Rs. {{ invoice.remaining_balance|floatformat:2 }}</span>
+                            {% elif invoice.state == 'Settled' %}
+                            <span class="font-bold text-on-surface">Rs. {{ invoice.amount_due|floatformat:2 }}</span>
+                            <span class="text-[10px] text-primary-fixed font-label-bold">Fully Paid</span>
+                            {% else %}
+                            <span class="font-bold text-on-surface">Rs. {{ invoice.amount_due|floatformat:2 }}</span>
+                            <span class="text-[10px] text-outline font-label-bold">Unpaid</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-on-surface-variant">{{ invoice.due_date|date:"d M Y" }}</td>
+                    <td class="px-6 py-4">
+                        {% if invoice.state == 'Settled' %}
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary-fixed text-lg" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                            <span class="text-primary-fixed font-bold text-xs uppercase">Settled</span>
+                        </div>
+                        {% elif invoice.state == 'Partially_Paid' %}
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-secondary text-lg" style="font-variation-settings: 'FILL' 1;">pending</span>
+                            <span class="text-secondary font-bold text-xs uppercase">Partially Paid</span>
+                        </div>
+                        {% elif invoice.state == 'Unpaid' %}
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-error text-lg" style="font-variation-settings: 'FILL' 1;">error</span>
+                            <span class="text-error font-bold text-xs uppercase">Unpaid</span>
+                        </div>
+                        {% else %}
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-outline text-lg" style="font-variation-settings: 'FILL' 1;">warning</span>
+                            <span class="text-outline font-bold text-xs uppercase">Disputed</span>
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <div class="flex justify-end items-center gap-4">
+                            <button onclick="openViewModal('{{ invoice.invoice_number }}', '{{ invoice.customer_name|escapejs }}', '{{ invoice.customer_pan|escapejs }}', '{{ invoice.customer_phone|escapejs }}', '{{ invoice.payment_method }}', '{{ invoice.amount_due|floatformat:2 }}', '{{ invoice.state }}')" 
+                                    class="text-on-surface hover:underline font-label-bold text-xs uppercase cursor-pointer">
+                                VIEW
+                            </button>
+                            <button onclick="openReconcileModal('{{ invoice.id }}', '{{ invoice.invoice_number }}', '{{ invoice.node.id }}', '{{ invoice.amount_due }}', '{{ invoice.amount_paid }}', '{{ invoice.state }}', '{{ invoice.due_date|date:'Y-m-d' }}')"
+                                    class="text-primary-fixed hover:underline font-label-bold text-xs uppercase cursor-pointer">
+                                RECONCILE
+                            </button>
+                            {% if is_admin %}
+                            <button onclick="confirmDelete('{% url 'accounts_receivable' %}', 'Delete Invoice {{ invoice.invoice_number }}', 'Are you sure you want to permanently delete this invoice ({{ invoice.invoice_number }}) belonging to {{ invoice.customer_name }}? This action cannot be reversed.', { action: 'delete', invoice_id: '{{ invoice.id }}' })" 
+                                    class="text-error hover:underline font-label-bold text-xs uppercase cursor-pointer">
+                                DELETE
+                            </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-8 text-outline text-body-md border border-dashed border-outline-variant/50 rounded-lg bg-background/20">
+                        No invoices registered in the accounts receivable ledger.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: Create Invoice -->
+<div id="createModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-container border border-outline-variant w-full max-w-md p-6 rounded-xl shadow-2xl relative">
+        <div class="flex justify-between items-center border-b border-outline-variant pb-4 mb-4">
+            <h3 class="font-headline-sm text-headline-sm text-primary flex items-center gap-2">
+                <span class="material-symbols-outlined">add_card</span>
+                CREATE NEW INVOICE
+            </h3>
+            <button onclick="closeCreateModal()" class="material-symbols-outlined text-outline hover:text-primary transition-colors cursor-pointer">close</button>
+        </div>
+        
+        <form method="POST" action="">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create">
+            
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Invoice Number</label>
+                    <input type="text" name="invoice_number" placeholder="e.g. INV-2026-005" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded" required>
+                </div>
+                
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Client / Org Node</label>
+                    <select name="node_id" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none cursor-pointer rounded" required>
+                        {% for node in nodes %}
+                            <option value="{{ node.id }}">{{ node.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Amount Due (Rs.)</label>
+                    <input type="number" name="amount_due" placeholder="e.g. 50000.00" min="0" step="0.01" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded" required>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Amount Paid (Rs.)</label>
+                    <input type="number" name="amount_paid" placeholder="e.g. 0.00" min="0" step="0.01" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Payment Status</label>
+                    <select name="state" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none cursor-pointer rounded">
+                        <option value="Unpaid">Unpaid</option>
+                        <option value="Partially_Paid">Partially Paid</option>
+                        <option value="Settled">Settled</option>
+                        <option value="Disputed">Disputed</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Due Date</label>
+                    <input type="date" name="due_date" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded" required>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-4 border-t border-outline-variant">
+                <button type="button" onclick="closeCreateModal()" class="px-4 py-2 border border-outline-variant hover:bg-surface-variant font-label-bold text-label-bold text-on-surface rounded cursor-pointer transition-colors">CANCEL</button>
+                <button type="submit" class="px-4 py-2 bg-primary hover:brightness-110 font-label-bold text-label-bold text-on-primary rounded cursor-pointer transition-all">GENERATE INVOICE</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Reconcile / Edit Invoice -->
+<div id="reconcileModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-container border border-outline-variant w-full max-w-md p-6 rounded-xl shadow-2xl relative">
+        <div class="flex justify-between items-center border-b border-outline-variant pb-4 mb-4">
+            <h3 class="font-headline-sm text-headline-sm text-primary flex items-center gap-2">
+                <span class="material-symbols-outlined">edit_square</span>
+                RECONCILE INVOICE
+            </h3>
+            <button onclick="closeReconcileModal()" class="material-symbols-outlined text-outline hover:text-primary transition-colors cursor-pointer">close</button>
+        </div>
+        
+        <form method="POST" action="">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update">
+            <input type="hidden" name="invoice_id" id="reconcile_invoice_id">
+            
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Invoice Number</label>
+                    <input type="text" name="invoice_number" id="reconcile_invoice_number" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded" required>
+                </div>
+                
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Client / Org Node</label>
+                    <select name="node_id" id="reconcile_node_id" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none cursor-pointer rounded" required>
+                        {% for node in nodes %}
+                            <option value="{{ node.id }}">{{ node.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Amount Due (Rs.)</label>
+                    <input type="number" name="amount_due" id="reconcile_amount_due" min="0" step="0.01" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded" required>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Amount Paid (Rs.)</label>
+                    <input type="number" name="amount_paid" id="reconcile_amount_paid" min="0" step="0.01" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Payment Status</label>
+                    <select name="state" id="reconcile_state" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none cursor-pointer rounded">
+                        <option value="Unpaid">Unpaid</option>
+                        <option value="Partially_Paid">Partially Paid</option>
+                        <option value="Settled">Settled</option>
+                        <option value="Disputed">Disputed</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Due Date</label>
+                    <input type="date" name="due_date" id="reconcile_due_date" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded" required>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-4 border-t border-outline-variant">
+                <button type="button" onclick="closeReconcileModal()" class="px-4 py-2 border border-outline-variant hover:bg-surface-variant font-label-bold text-label-bold text-on-surface rounded cursor-pointer transition-colors">CANCEL</button>
+                <button type="submit" class="px-4 py-2 bg-primary hover:brightness-110 font-label-bold text-label-bold text-on-primary rounded cursor-pointer transition-all">SAVE CHANGES</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openCreateModal() {
+        document.getElementById('createModal').classList.remove('hidden');
+    }
+    
+    function closeCreateModal() {
+        document.getElementById('createModal').classList.add('hidden');
+    }
+
+    function openReconcileModal(id, invoiceNumber, nodeId, amountDue, amountPaid, state, dueDate) {
+        document.getElementById('reconcile_invoice_id').value = id;
+        document.getElementById('reconcile_invoice_number').value = invoiceNumber;
+        document.getElementById('reconcile_node_id').value = nodeId;
+        document.getElementById('reconcile_amount_due').value = amountDue;
+        document.getElementById('reconcile_amount_paid').value = amountPaid;
+        document.getElementById('reconcile_state').value = state;
+        document.getElementById('reconcile_due_date').value = dueDate;
+        
+        document.getElementById('reconcileModal').classList.remove('hidden');
+    }
+
+    function closeReconcileModal() {
+        document.getElementById('reconcileModal').classList.add('hidden');
+    }
+
+    function openViewModal(invoiceNum, custName, pan, phone, payMethod, amount, state) {
+        document.getElementById('viewInvoiceNumber').innerText = invoiceNum;
+        document.getElementById('viewCustomerName').innerText = custName || 'N/A';
+        document.getElementById('viewCustomerPan').innerText = pan || 'N/A';
+        document.getElementById('viewCustomerPhone').innerText = phone || 'N/A';
+        document.getElementById('viewPaymentMethod').innerText = payMethod || 'Cash';
+        document.getElementById('viewAmountDue').innerText = 'Rs. ' + amount;
+        
+        const stateEl = document.getElementById('viewState');
+        stateEl.innerText = state;
+        if (state === 'Settled') {
+            stateEl.className = 'text-sm font-bold uppercase mt-1 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary-fixed inline-block';
+        } else if (state === 'Partially_Paid') {
+            stateEl.className = 'text-sm font-bold uppercase mt-1 px-3 py-1 rounded-full bg-secondary/10 border border-secondary/20 text-secondary inline-block';
+        } else {
+            stateEl.className = 'text-sm font-bold uppercase mt-1 px-3 py-1 rounded-full bg-error/10 border border-error/20 text-error inline-block';
+        }
+        
+        const modal = document.getElementById('viewInvoiceModal');
+        const card = document.getElementById('viewInvoiceModalCard');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            card.classList.remove('scale-95');
+            card.classList.add('scale-100');
+        }, 10);
+    }
+
+    function closeViewModal() {
+        const modal = document.getElementById('viewInvoiceModal');
+        const card = document.getElementById('viewInvoiceModalCard');
+        modal.classList.add('opacity-0');
+        card.classList.remove('scale-100');
+        card.classList.add('scale-95');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+        }, 300);
+    }
+</script>
+
+<!-- View Invoice Modal -->
+<div id="viewInvoiceModal" class="hidden fixed inset-0 z-50 bg-scrim/80 backdrop-blur-sm flex items-center justify-center opacity-0 transition-opacity duration-300">
+    <div class="bg-surface-container border border-outline-variant w-11/12 md:w-[500px] rounded-3xl shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300" id="viewInvoiceModalCard">
+        <div class="p-6 border-b border-outline-variant flex justify-between items-center bg-surface-container-high">
+            <div>
+                <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">Invoice Overview</h3>
+                <p id="viewInvoiceNumber" class="text-sm text-on-surface-variant font-data-mono mt-1">#</p>
+            </div>
+            <button type="button" onclick="closeViewModal()" class="material-symbols-outlined text-on-surface-variant hover:text-error transition-colors cursor-pointer w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-variant">close</button>
+        </div>
+        <div class="p-6 space-y-5">
+            <div class="grid grid-cols-2 gap-y-5 gap-x-4">
+                <div>
+                    <p class="text-[10px] uppercase font-bold text-on-surface-variant tracking-widest mb-1">Customer Name</p>
+                    <p id="viewCustomerName" class="text-sm font-semibold text-on-surface">-</p>
+                </div>
+                <div>
+                    <p class="text-[10px] uppercase font-bold text-on-surface-variant tracking-widest mb-1">PAN / VAT No.</p>
+                    <p id="viewCustomerPan" class="text-sm font-data-mono text-on-surface">-</p>
+                </div>
+                <div>
+                    <p class="text-[10px] uppercase font-bold text-on-surface-variant tracking-widest mb-1">Phone Number</p>
+                    <p id="viewCustomerPhone" class="text-sm font-data-mono text-on-surface">-</p>
+                </div>
+                <div>
+                    <p class="text-[10px] uppercase font-bold text-on-surface-variant tracking-widest mb-1">Payment Method</p>
+                    <p id="viewPaymentMethod" class="text-sm font-bold text-secondary uppercase">-</p>
+                </div>
+            </div>
+            
+            <div class="flex justify-between items-center bg-surface-container-low p-4 rounded-xl border border-outline-variant/50 shadow-inner mt-2">
+                <div>
+                    <p class="text-[10px] uppercase font-bold text-on-surface-variant tracking-widest">Amount Due</p>
+                    <p id="viewAmountDue" class="text-xl font-data-mono font-bold text-on-surface mt-1">Rs. 0</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-[10px] uppercase font-bold text-on-surface-variant tracking-widest">Status</p>
+                    <p id="viewState" class="text-sm font-bold uppercase mt-1 px-3 py-1 rounded-full bg-surface-container inline-block border">-</p>
+                </div>
+            </div>
+        </div>
+        <div class="p-5 bg-surface-container-high border-t border-outline-variant flex justify-end">
+            <button type="button" onclick="closeViewModal()" class="px-6 py-2 bg-primary text-on-primary font-label-bold rounded-full cursor-pointer hover:brightness-110 transition-all shadow-md shadow-primary/20">Close Details</button>
+        </div>
+    </div>
+</div>
+{% endblock content %}

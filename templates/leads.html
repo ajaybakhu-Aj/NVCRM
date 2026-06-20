@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Header and Stats -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
+    <div>
+        <h3 class="font-headline-lg text-headline-lg text-on-surface">Lead Pipeline</h3>
+        <p class="text-on-surface-variant font-body-md mt-1">CRM Deal and Lead tracking through structured pipeline stages.</p>
+    </div>
+    <div class="flex gap-2">
+        <button onclick="openLeadModal()" class="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-bold text-label-bold flex items-center gap-2 hover:scale-95 transition-transform cursor-pointer">
+            <span class="material-symbols-outlined text-lg">person_add</span>
+            ADD NEW LEAD
+        </button>
+    </div>
+</div>
+
+<!-- CRM KPI Overview Cards -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="bg-surface-container border border-outline-variant p-4 rounded-xl flex items-center gap-4">
+        <div class="w-10 h-10 rounded bg-primary/10 flex items-center justify-center text-primary">
+            <span class="material-symbols-outlined">filter_list</span>
+        </div>
+        <div>
+            <p class="text-[10px] text-outline font-label-caps uppercase tracking-wider">Active Deals</p>
+            <h4 class="font-headline-md text-headline-md text-on-surface mt-0.5">{{ total_leads }}</h4>
+        </div>
+    </div>
+    <div class="bg-surface-container border border-outline-variant p-4 rounded-xl flex items-center gap-4">
+        <div class="w-10 h-10 rounded bg-success-container/20 flex items-center justify-center text-success">
+            <span class="material-symbols-outlined">monetization_on</span>
+        </div>
+        <div>
+            <p class="text-[10px] text-outline font-label-caps uppercase tracking-wider">Est. Value</p>
+            <h4 class="font-headline-md text-headline-md text-on-surface mt-0.5">Rs. {{ total_value|floatformat:0 }}</h4>
+        </div>
+    </div>
+    <div class="bg-surface-container border border-outline-variant p-4 rounded-xl flex items-center gap-4">
+        <div class="w-10 h-10 rounded bg-info-container/20 flex items-center justify-center text-info">
+            <span class="material-symbols-outlined">trending_up</span>
+        </div>
+        <div>
+            <p class="text-[10px] text-outline font-label-caps uppercase tracking-wider">Win Rate</p>
+            <h4 class="font-headline-md text-headline-md text-on-surface mt-0.5">{{ win_rate }}%</h4>
+        </div>
+    </div>
+    <div class="bg-surface-container border border-outline-variant p-4 rounded-xl flex items-center gap-4">
+        <div class="w-10 h-10 rounded bg-error-container/20 flex items-center justify-center text-error">
+            <span class="material-symbols-outlined">skull</span>
+        </div>
+        <div>
+            <p class="text-[10px] text-outline font-label-caps uppercase tracking-wider">Dead Ratio</p>
+            <h4 class="font-headline-md text-headline-md text-on-surface mt-0.5">{{ dead_ratio }}%</h4>
+        </div>
+    </div>
+</div>
+
+<!-- Kanban Grid -->
+<div class="flex flex-nowrap lg:grid lg:grid-cols-4 gap-6 items-start overflow-x-auto pb-4 snap-x snap-mandatory">
+    
+    <!-- Stage: Identified -->
+    <div class="bg-surface-container/60 border border-outline-variant/60 rounded-xl p-4 flex flex-col min-h-[500px] min-w-[300px] lg:min-w-0 snap-center">
+        <div class="flex items-center justify-between pb-3 border-b border-outline-variant mb-4">
+            <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-info"></span>
+                <h4 class="font-label-bold text-label-bold text-on-surface">Identified</h4>
+            </div>
+            <span class="bg-info/10 text-info px-2 py-0.5 text-[10px] font-bold rounded-full border border-info/20">{{ stages.Identified|length }}</span>
+        </div>
+        <div class="space-y-3 flex-1 overflow-y-auto max-h-[60vh] pr-1">
+            {% for lead in stages.Identified %}
+                {% include "lead_card.html" with lead=lead %}
+            {% empty %}
+                <div class="text-center py-8 text-outline text-[11px] border border-dashed border-outline-variant/50 rounded-lg bg-background/20">No leads in pipeline</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Stage: Proposal -->
+    <div class="bg-surface-container/60 border border-outline-variant/60 rounded-xl p-4 flex flex-col min-h-[500px] min-w-[300px] lg:min-w-0 snap-center">
+        <div class="flex items-center justify-between pb-3 border-b border-outline-variant mb-4">
+            <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-warning"></span>
+                <h4 class="font-label-bold text-label-bold text-on-surface">Proposal</h4>
+            </div>
+            <span class="bg-warning/10 text-warning px-2 py-0.5 text-[10px] font-bold rounded-full border border-warning/20">{{ stages.Proposal|length }}</span>
+        </div>
+        <div class="space-y-3 flex-1 overflow-y-auto max-h-[60vh] pr-1">
+            {% for lead in stages.Proposal %}
+                {% include "lead_card.html" with lead=lead %}
+            {% empty %}
+                <div class="text-center py-8 text-outline text-[11px] border border-dashed border-outline-variant/50 rounded-lg bg-background/20">No leads in pipeline</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Stage: Converted To Project -->
+    <div class="bg-surface-container/60 border border-outline-variant/60 rounded-xl p-4 flex flex-col min-h-[500px] min-w-[300px] lg:min-w-0 snap-center">
+        <div class="flex items-center justify-between pb-3 border-b border-outline-variant mb-4">
+            <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-success"></span>
+                <h4 class="font-label-bold text-label-bold text-on-surface">Converted / Won</h4>
+            </div>
+            <span class="bg-success/10 text-success px-2 py-0.5 text-[10px] font-bold rounded-full border border-success/20">{{ stages.Converted_To_Project|length }}</span>
+        </div>
+        <div class="space-y-3 flex-1 overflow-y-auto max-h-[60vh] pr-1">
+            {% for lead in stages.Converted_To_Project %}
+                {% include "lead_card.html" with lead=lead %}
+            {% empty %}
+                <div class="text-center py-8 text-outline text-[11px] border border-dashed border-outline-variant/50 rounded-lg bg-background/20">No leads in pipeline</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Stage: Dead -->
+    <div class="bg-surface-container/60 border border-outline-variant/60 rounded-xl p-4 flex flex-col min-h-[500px] min-w-[300px] lg:min-w-0 snap-center">
+        <div class="flex items-center justify-between pb-3 border-b border-outline-variant mb-4">
+            <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-error"></span>
+                <h4 class="font-label-bold text-label-bold text-on-surface">Dead / Lost</h4>
+            </div>
+            <span class="bg-error/10 text-error px-2 py-0.5 text-[10px] font-bold rounded-full border border-error/20">{{ stages.Dead|length }}</span>
+        </div>
+        <div class="space-y-3 flex-1 overflow-y-auto max-h-[60vh] pr-1">
+            {% for lead in stages.Dead %}
+                {% include "lead_card.html" with lead=lead %}
+            {% empty %}
+                <div class="text-center py-8 text-outline text-[11px] border border-dashed border-outline-variant/50 rounded-lg bg-background/20">No leads in pipeline</div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+<!-- Create Lead Modal -->
+<div id="leadModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-container border border-outline-variant w-full max-w-md p-6 rounded-xl shadow-2xl relative">
+        <div class="flex justify-between items-center border-b border-outline-variant pb-4 mb-4">
+            <h3 class="font-headline-sm text-headline-sm text-primary flex items-center gap-2">
+                <span class="material-symbols-outlined">person_add</span>
+                ADD NEW LEAD
+            </h3>
+            <button onclick="closeLeadModal()" class="material-symbols-outlined text-outline hover:text-primary transition-colors cursor-pointer">close</button>
+        </div>
+        
+        <form method="POST" action="">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create">
+            
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Lead / Client Name</label>
+                    <input type="text" name="lead_name" placeholder="e.g. Nepal Telecom" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded" required>
+                </div>
+                
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Org Node Location</label>
+                    <select name="node_id" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none cursor-pointer rounded">
+                        {% for node in nodes %}
+                            <option value="{{ node.id }}">{{ node.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Initial Pipeline Stage</label>
+                    <select name="pipeline_state" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none cursor-pointer rounded">
+                        <option value="Identified">Identified</option>
+                        <option value="Proposal">Proposal</option>
+                        <option value="Converted_To_Project">Converted / Won</option>
+                        <option value="Dead">Dead / Lost</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Phone Number</label>
+                    <input type="text" name="phone" placeholder="e.g. +977-9801200000" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Address</label>
+                    <input type="text" name="address" placeholder="e.g. Lalitpur, Nepal" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Product / Camera Inquiry</label>
+                    <input type="text" name="product_inquiry" placeholder="e.g. 10x PTZ Cameras, 5x DVRs" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Estimated Deal Value (Rs.)</label>
+                    <input type="number" name="deal_value" placeholder="e.g. 500000" min="0" step="1000" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-4 border-t border-outline-variant">
+                <button type="button" onclick="closeLeadModal()" class="px-4 py-2 border border-outline-variant hover:bg-surface-variant font-label-bold text-label-bold text-on-surface rounded cursor-pointer transition-colors">CANCEL</button>
+                <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary-dark font-label-bold text-label-bold text-on-primary rounded cursor-pointer transition-colors">CREATE LEAD</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openLeadModal() {
+        document.getElementById('leadModal').classList.remove('hidden');
+    }
+    function closeLeadModal() {
+        document.getElementById('leadModal').classList.add('hidden');
+    }
+</script>
+{% endblock content %}

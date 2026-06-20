@@ -1,0 +1,60 @@
+<div class="bg-surface-container-high border border-outline-variant p-4 rounded-lg shadow-sm hover:border-primary/50 transition-all flex flex-col gap-3">
+    <!-- Header -->
+    <div class="flex justify-between items-start gap-2">
+        <h5 class="font-headline-sm text-[14px] font-bold text-on-surface leading-tight">{{ lead.lead_name }}</h5>
+        {% if lead.deal_value > 0 %}
+        <span class="text-[10px] font-bold text-primary whitespace-nowrap bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">Rs. {{ lead.deal_value|floatformat:0 }}</span>
+        {% endif %}
+    </div>
+
+    <!-- Details -->
+    <div class="flex flex-col gap-1">
+        <div class="flex items-center gap-1.5 text-on-surface-variant">
+            <span class="material-symbols-outlined text-sm">hub</span>
+            <span class="text-[10px] font-medium tracking-wide uppercase">{{ lead.node.name }}</span>
+        </div>
+        {% if lead.phone %}
+        <div class="flex items-center gap-1.5 text-on-surface-variant">
+            <span class="material-symbols-outlined text-sm">call</span>
+            <span class="text-[10px] font-body-sm font-data-mono">{{ lead.phone }}</span>
+        </div>
+        {% endif %}
+        {% if lead.address %}
+        <div class="flex items-center gap-1.5 text-on-surface-variant">
+            <span class="material-symbols-outlined text-sm">location_on</span>
+            <span class="text-[10px] font-body-sm text-on-surface-variant/80">{{ lead.address }}</span>
+        </div>
+        {% endif %}
+        {% if lead.product_inquiry %}
+        <div class="flex items-center gap-1.5 text-primary mt-1 border-t border-outline-variant/30 pt-1.5">
+            <span class="material-symbols-outlined text-sm">inventory_2</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider">{{ lead.product_inquiry }}</span>
+        </div>
+        {% endif %}
+        <div class="flex items-center gap-1.5 text-outline">
+            <span class="material-symbols-outlined text-sm">schedule</span>
+            <span class="text-[10px] font-data-mono">{{ lead.created_at|timesince }} ago</span>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center justify-between gap-2 pt-2 border-t border-outline-variant/40 mt-1">
+        <!-- Stage Shift Selector -->
+        <form method="POST" action="" class="flex-1">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_stage">
+            <input type="hidden" name="lead_id" value="{{ lead.id }}">
+            <select name="pipeline_state" onchange="this.form.submit()" class="w-full bg-background text-[10px] text-on-surface border border-outline-variant rounded px-2 py-1 focus:border-primary outline-none cursor-pointer font-semibold">
+                <option value="Identified" {% if lead.pipeline_state == 'Identified' %}selected{% endif %}>Identified</option>
+                <option value="Proposal" {% if lead.pipeline_state == 'Proposal' %}selected{% endif %}>Proposal</option>
+                <option value="Converted_To_Project" {% if lead.pipeline_state == 'Converted_To_Project' %}selected{% endif %}>Won / Project</option>
+                <option value="Dead" {% if lead.pipeline_state == 'Dead' %}selected{% endif %}>Dead / Lost</option>
+            </select>
+        </form>
+
+        <!-- Delete Action -->
+        <button type="button" onclick="event.stopPropagation(); confirmDelete('{% url 'lead_pipeline' %}', 'Delete Lead', 'Are you sure you want to permanently delete this lead? This action is irreversible.', { action: 'delete', lead_id: '{{ lead.id }}' })" class="material-symbols-outlined text-outline hover:text-error text-base flex items-center justify-center p-1 rounded hover:bg-surface-variant transition-colors cursor-pointer" title="Delete Lead">
+            delete
+        </button>
+    </div>
+</div>

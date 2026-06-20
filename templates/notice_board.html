@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Dashboard Header for Notice Board -->
+<div class="flex justify-between items-end mb-8">
+    <div>
+        <h3 class="font-headline-lg text-headline-lg text-on-surface">Notice Board</h3>
+        <p class="text-on-surface-variant font-body-md mt-1">Company wide announcements and updates.</p>
+    </div>
+    <div class="flex gap-2">
+        {% if can_create %}
+        <button onclick="document.getElementById('createNoticeModal').classList.remove('hidden')" class="bg-primary-container text-on-primary-container px-4 py-2 rounded-lg font-label-bold text-label-bold hover:scale-95 transition-transform">
+            CREATE NOTICE
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<div class="space-y-4">
+    {% for notice in notices %}
+    <div class="bg-surface-container border border-outline-variant rounded-xl p-6 hover:bg-surface-container-high transition-colors cursor-pointer group">
+        <div class="flex justify-between items-start mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-on-primary-fixed font-bold">
+                    {% if notice.department == 'HQ' %}HQ{% else %}<span class="material-symbols-outlined">campaign</span>{% endif %}
+                </div>
+                <div>
+                    <h4 class="font-headline-sm text-on-surface group-hover:text-primary-fixed transition-colors">{{ notice.title }}</h4>
+                    <p class="text-[12px] text-on-surface-variant font-data-mono mt-1">Posted by: {{ notice.author_name }} &bull; {{ notice.created_at|timesince }} ago</p>
+                </div>
+            </div>
+            {% if notice.priority == 'High Priority' %}
+            <span class="px-2 py-0.5 rounded bg-error-container text-on-error-container text-[10px] font-bold uppercase tracking-widest border border-error">{{ notice.priority }}</span>
+            {% elif notice.priority == 'Information' %}
+            <span class="px-2 py-0.5 rounded bg-surface-variant text-on-surface-variant text-[10px] font-bold uppercase tracking-widest border border-outline">{{ notice.priority }}</span>
+            {% else %}
+            <span class="px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container text-[10px] font-bold uppercase tracking-widest">{{ notice.priority }}</span>
+            {% endif %}
+        </div>
+        <p class="text-body-md text-on-surface-variant line-clamp-2">
+            {{ notice.content }}
+        </p>
+    </div>
+    {% empty %}
+    <div class="text-center py-8 text-on-surface-variant">
+        No notices available.
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Create Notice Modal -->
+<div id="createNoticeModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm">
+    <div class="bg-surface rounded-2xl w-full max-w-lg overflow-hidden border border-outline shadow-2xl">
+        <div class="p-6 border-b border-outline flex justify-between items-center bg-surface-container-low">
+            <h3 class="font-headline-sm text-on-surface">Create New Notice</h3>
+            <button onclick="document.getElementById('createNoticeModal').classList.add('hidden')" class="text-on-surface-variant hover:text-on-surface">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <form method="POST" action="{% url 'notice_board' %}" class="p-6 space-y-4">
+            {% csrf_token %}
+            <div>
+                <label class="block text-label-sm font-label-bold text-on-surface mb-1">Notice Title</label>
+                <input type="text" name="title" required class="w-full bg-surface-container px-4 py-2 rounded-lg border border-outline focus:border-primary-fixed focus:outline-none text-on-surface">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-label-sm font-label-bold text-on-surface mb-1">Priority</label>
+                    <select name="priority" class="w-full bg-surface-container px-4 py-2 rounded-lg border border-outline focus:border-primary-fixed focus:outline-none text-on-surface">
+                        <option value="Standard">Standard</option>
+                        <option value="Information">Information</option>
+                        <option value="High Priority">High Priority</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-label-sm font-label-bold text-on-surface mb-1">Department</label>
+                    <select name="department" class="w-full bg-surface-container px-4 py-2 rounded-lg border border-outline focus:border-primary-fixed focus:outline-none text-on-surface">
+                        <option value="HQ">HQ</option>
+                        <option value="HR">HR</option>
+                        <option value="IT">IT</option>
+                        <option value="Operations">Operations</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-label-sm font-label-bold text-on-surface mb-1">Content</label>
+                <textarea name="content" required rows="4" class="w-full bg-surface-container px-4 py-2 rounded-lg border border-outline focus:border-primary-fixed focus:outline-none text-on-surface"></textarea>
+            </div>
+            <div class="pt-4 flex justify-end gap-3">
+                <button type="button" onclick="document.getElementById('createNoticeModal').classList.add('hidden')" class="px-4 py-2 text-on-surface-variant hover:bg-surface-container rounded-lg font-label-bold">Cancel</button>
+                <button type="submit" class="bg-primary-fixed text-on-primary-fixed px-6 py-2 rounded-lg font-label-bold hover:scale-95 transition-transform">Publish Notice</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock content %}

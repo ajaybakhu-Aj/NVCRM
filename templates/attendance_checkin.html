@@ -1,0 +1,478 @@
+{% extends "base.html" %}
+
+{% block head %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+    .pulse-marker {
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 255, 158, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(220, 255, 158, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 255, 158, 0); }
+    }
+    .geofence-glow {
+        box-shadow: inset 0 0 30px rgba(220, 255, 158, 0.2), 0 0 15px rgba(220, 255, 158, 0.1);
+    }
+    #map {
+        width: 100%;
+        height: 100%;
+        background-color: #031427;
+    }
+    .leaflet-tile {
+        filter: brightness(0.95) contrast(1.1) saturate(1.2);
+    }
+    .leaflet-container {
+        background: #031427 !important;
+        color: #d3e4fe;
+    }
+    .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+        background: #102034 !important;
+        border: 1px border #26364a !important;
+        color: #d3e4fe !important;
+    }
+</style>
+{% endblock head %}
+
+{% block content %}
+<!-- Hidden CSRF token for AJAX checkin -->
+<input type="hidden" id="csrfToken" value="{{ csrf_token }}">
+
+<!-- Dashboard Header for Time & Attendance -->
+<div class="flex justify-between items-end mb-8">
+    <div>
+        <h3 class="font-headline-lg text-headline-lg text-on-surface">Time & Attendance</h3>
+        <p class="text-on-surface-variant font-body-md mt-1">Satellite Geofencing Telemetry & Logistics Monitoring</p>
+    </div>
+</div>
+
+<!-- Section 1: Geospatial Check-in Map (Compact h-[450px]) -->
+<div class="flex flex-col md:flex-row h-[450px] border border-outline-variant rounded-xl overflow-hidden shadow-lg relative mb-8">
+    <!-- Left Panel: Geospatial Info -->
+    <section class="w-full md:w-1/3 lg:w-1/4 h-1/2 md:h-full bg-surface-container-lowest border-r border-outline-variant overflow-y-auto p-4 flex flex-col z-10">
+        <div class="mb-4">
+            <h2 class="font-headline-md text-headline-md text-primary mb-1">Night Vision Office</h2>
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                <p class="font-label-caps text-label-caps text-on-surface-variant text-[10px]">Live Satellite Link Active</p>
+            </div>
+        </div>
+        
+        <!-- Data Matrix -->
+        <div class="space-y-3 flex-1">
+            <div class="bg-surface-container border border-outline-variant p-3">
+                <p class="font-label-caps text-label-caps text-on-surface-variant mb-1 text-[9px] uppercase tracking-wider">GPS COORDINATES</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <p class="text-[9px] text-outline font-label-caps">LATITUDE</p>
+                        <p id="user-lat" class="font-data-mono text-data-mono text-on-surface text-xs">27.67731° N</p>
+                    </div>
+                    <div>
+                        <p class="text-[9px] text-outline font-label-caps">LONGITUDE</p>
+                        <p id="user-lng" class="font-data-mono text-data-mono text-on-surface text-xs">85.39791° E</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-surface-container border border-outline-variant p-3">
+                <p class="font-label-caps text-label-caps text-on-surface-variant mb-1 text-[9px] uppercase tracking-wider">GEOFENCE METRICS</p>
+                <div class="flex flex-col gap-2">
+                    <div class="flex justify-between items-center text-xs">
+                        <p class="text-[9px] text-outline font-label-caps">DISTANCE</p>
+                        <p id="dist-metric" class="font-data-mono text-data-mono text-primary font-bold">12.45 m</p>
+                    </div>
+                    <div class="w-full bg-surface-container-high h-1 rounded-full overflow-hidden">
+                        <div id="dist-progress" class="bg-primary h-full w-[15%] transition-all duration-300"></div>
+                    </div>
+                    <div class="flex justify-between items-center text-xs">
+                        <p class="text-[9px] text-outline font-label-caps">LIMIT</p>
+                        <p class="font-data-mono text-data-mono text-on-surface text-[10px]">< 50.0 m</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-surface-container border border-outline-variant p-3 flex items-center justify-between">
+                <div>
+                    <p class="font-label-caps text-label-caps text-on-surface-variant text-[9px] uppercase tracking-wider">NODE STATUS</p>
+                    <p id="node-status" class="font-headline-md text-primary font-bold text-sm transition-colors">AUTHORIZED</p>
+                </div>
+                <span id="node-status-icon" class="material-symbols-outlined text-primary text-2xl transition-colors" style="font-variation-settings: 'FILL' 1;">verified_user</span>
+            </div>
+        </div>
+        
+        <!-- Action Section -->
+        <div class="mt-4 pt-3 border-t border-outline-variant">
+            <button class="w-full bg-primary text-on-primary py-3 px-4 font-label-bold text-center uppercase tracking-widest transition-all hover:brightness-110 active:scale-[0.98] pulse-marker geofence-glow border border-primary rounded text-xs cursor-pointer" id="checkInBtn">
+                Check In / Out
+            </button>
+        </div>
+    </section>
+    
+    <!-- Right Panel: High-res Leaflet Map -->
+    <section class="flex-1 h-full relative bg-surface-container-highest">
+        <!-- Interactive Map Container -->
+        <div id="map" class="absolute inset-0 z-0"></div>
+        
+        <!-- HUD Overlays -->
+        <div class="absolute top-4 right-4 z-20 flex flex-col gap-2">
+            <div class="bg-surface-container-low/80 backdrop-blur-sm border border-outline-variant p-2 flex flex-col gap-1 rounded">
+                <div class="flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-primary text-xs">satellite_alt</span>
+                    <span class="font-label-caps text-label-caps text-primary text-[9px]">SAT_LINK_8</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-on-surface-variant text-xs">signal_cellular_4_bar</span>
+                    <span class="font-label-caps text-label-caps text-on-surface-variant text-[9px]">SIGNAL: 98%</span>
+                </div>
+            </div>
+            
+            <div class="bg-surface-container-low/80 backdrop-blur-sm border border-outline-variant p-2 rounded">
+                <div class="flex flex-col gap-0.5">
+                    <div class="flex justify-between items-center gap-3">
+                        <span class="font-label-caps text-label-caps text-on-surface-variant text-[9px]">X-DIFF</span>
+                        <span id="hud-x" class="font-data-mono text-data-mono text-primary text-[9px]">0.0001</span>
+                    </div>
+                    <div class="flex justify-between items-center gap-3">
+                        <span class="font-label-caps text-label-caps text-on-surface-variant text-[9px]">Y-DIFF</span>
+                        <span id="hud-y" class="font-data-mono text-data-mono text-primary text-[9px]">0.0001</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Grid lines overlay -->
+        <div class="absolute inset-0 pointer-events-none opacity-[0.05]" style="background-image: linear-gradient(#dcff9e 1px, transparent 1px), linear-gradient(90deg, #dcff9e 1px, transparent 1px); background-size: 40px 40px;"></div>
+    </section>
+</div>
+
+<!-- Section 2: Monthly Attendance Calendar and Statistics -->
+<div class="bg-surface-container border border-outline-variant rounded-xl p-6 mb-8">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b border-outline-variant pb-6">
+        <div>
+            <h4 class="font-headline-sm text-headline-sm text-on-surface uppercase tracking-wider font-semibold">Monthly Attendance Calendar</h4>
+            <p class="text-on-surface-variant text-body-md mt-1">Review check-in/out stamps, presence metrics, and log details.</p>
+        </div>
+        
+        <!-- Month navigation -->
+        <div class="flex items-center gap-4 bg-surface-container-lowest border border-outline-variant px-4 py-2 rounded-lg">
+            <a href="?year={{ prev_year }}&month={{ prev_month }}" class="material-symbols-outlined text-on-surface hover:text-primary transition-colors text-sm">chevron_left</a>
+            <span class="font-semibold text-on-surface uppercase tracking-wider text-xs font-data-mono">{{ month_name }} {{ year }}</span>
+            <a href="?year={{ next_year }}&month={{ next_month }}" class="material-symbols-outlined text-on-surface hover:text-primary transition-colors text-sm">chevron_right</a>
+        </div>
+    </div>
+    
+    <!-- Attendance Statistics cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-4 flex items-center justify-between">
+            <div>
+                <span class="block text-[10px] text-outline font-label-caps uppercase tracking-wider">Present</span>
+                <span class="text-2xl font-bold text-primary mt-1 block">{{ total_present }} <span class="text-xs text-on-surface-variant font-normal">Days</span></span>
+            </div>
+            <span class="material-symbols-outlined text-primary/30 text-3xl">check_circle</span>
+        </div>
+        <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-4 flex items-center justify-between">
+            <div>
+                <span class="block text-[10px] text-outline font-label-caps uppercase tracking-wider">Late Arrivals</span>
+                <span class="text-2xl font-bold text-amber-300 mt-1 block">{{ total_late }} <span class="text-xs text-on-surface-variant font-normal">Days</span></span>
+            </div>
+            <span class="material-symbols-outlined text-amber-300/30 text-3xl">history_toggle_off</span>
+        </div>
+        <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-4 flex items-center justify-between">
+            <div>
+                <span class="block text-[10px] text-outline font-label-caps uppercase tracking-wider">On Leave</span>
+                <span class="text-2xl font-bold text-blue-400 mt-1 block">{{ total_leave }} <span class="text-xs text-on-surface-variant font-normal">Days</span></span>
+            </div>
+            <span class="material-symbols-outlined text-blue-400/30 text-3xl">event_busy</span>
+        </div>
+        <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-4 flex items-center justify-between">
+            <div>
+                <span class="block text-[10px] text-outline font-label-caps uppercase tracking-wider">Absences</span>
+                <span class="text-2xl font-bold text-error mt-1 block">{{ total_absent }} <span class="text-xs text-on-surface-variant font-normal">Days</span></span>
+            </div>
+            <span class="material-symbols-outlined text-error/30 text-3xl">cancel</span>
+        </div>
+    </div>
+    
+    <!-- Attendance Grid -->
+    <div class="overflow-x-auto pb-2">
+        <div class="min-w-[500px] grid grid-cols-7 gap-2">
+            <!-- Day headers -->
+            <span class="text-center text-[10px] font-label-caps text-outline py-2 border-b border-outline-variant/30 uppercase tracking-widest">Sun</span>
+            <span class="text-center text-[10px] font-label-caps text-outline py-2 border-b border-outline-variant/30 uppercase tracking-widest">Mon</span>
+            <span class="text-center text-[10px] font-label-caps text-outline py-2 border-b border-outline-variant/30 uppercase tracking-widest">Tue</span>
+            <span class="text-center text-[10px] font-label-caps text-outline py-2 border-b border-outline-variant/30 uppercase tracking-widest">Wed</span>
+            <span class="text-center text-[10px] font-label-caps text-outline py-2 border-b border-outline-variant/30 uppercase tracking-widest">Thu</span>
+            <span class="text-center text-[10px] font-label-caps text-outline py-2 border-b border-outline-variant/30 uppercase tracking-widest">Fri</span>
+            <span class="text-center text-[10px] font-label-caps text-outline py-2 border-b border-outline-variant/30 uppercase tracking-widest font-semibold text-error">Sat</span>
+            
+            {% for week in weeks %}
+                {% for cell in week %}
+                    <div class="min-h-[90px] p-2 bg-surface-container-low/50 border border-outline-variant/40 rounded flex flex-col justify-between transition-all hover:bg-surface-container-high/30 group relative 
+                    {% if cell.is_today %}ring-1 ring-primary/85 bg-primary/5{% endif %}
+                    {% if cell.is_weekend and not cell.record %}bg-surface-container-lowest/30{% endif %}">
+                        
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-semibold font-tabular-numeric {% if cell.is_today %}text-primary font-bold{% elif cell.is_weekend %}text-error/60{% else %}text-on-surface-variant{% endif %}">
+                                {{ cell.day }}
+                            </span>
+                            
+                            {% if cell.is_today %}
+                                <span class="w-1.5 h-1.5 rounded-full bg-primary animate-ping" title="Today"></span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mt-2 flex flex-col gap-1.5">
+                            {% if cell.day %}
+                                {% if cell.record %}
+                                    <!-- Attendance Status Badge -->
+                                    <span class="text-[8px] py-0.5 px-1 rounded text-center font-bold uppercase tracking-wider border
+                                    {% if cell.record.status == 'Present' %}bg-primary/10 text-primary border-primary/20
+                                    {% elif cell.record.status == 'Late' %}bg-amber-400/10 text-amber-300 border-amber-400/20
+                                    {% elif cell.record.status == 'Leave' %}bg-blue-400/10 text-blue-400 border-blue-400/20
+                                    {% else %}bg-error/10 text-error border-error/20{% endif %}">
+                                        {{ cell.record.status }}
+                                    </span>
+                                    
+                                    <!-- Timestamps if present or late -->
+                                    {% if cell.record.status == 'Present' or cell.record.status == 'Late' %}
+                                        <div class="text-[8px] font-data-mono text-on-surface-variant flex flex-col gap-0.5 leading-none">
+                                            <span class="flex justify-between"><span>IN:</span> <span class="text-primary font-semibold">{{ cell.record.check_in_time|time:"h:i A" }}</span></span>
+                                            {% if cell.record.check_out_time %}
+                                                <span class="flex justify-between"><span>OUT:</span> <span class="text-outline">{{ cell.record.check_out_time|time:"h:i A" }}</span></span>
+                                            {% else %}
+                                                <span class="flex justify-between text-amber-300"><span>OUT:</span> <span>Active</span></span>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                {% elif cell.is_weekend %}
+                                    <span class="text-[8px] text-center text-outline uppercase font-semibold tracking-wider bg-surface-container-lowest py-0.5 rounded border border-outline-variant/10">Weekend</span>
+                                {% else %}
+                                    <!-- Empty weekday (Check if in future or past) -->
+                                    {% if year < today.year or year == today.year and month < today.month or year == today.year and month == today.month and cell.day < today.day %}
+                                        <span class="text-[8px] text-center text-error/40 uppercase font-bold tracking-wider bg-error/5 py-0.5 rounded border border-error/10">Absent</span>
+                                    {% else %}
+                                        <span class="text-[8px] text-center text-outline/30 uppercase font-semibold tracking-wider">--</span>
+                                    {% endif %}
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+<script>
+    // Target location (Night Vision CCTV Nepal)
+    const OFFICE_LAT = 27.6773098;
+    const OFFICE_LNG = 85.3979076;
+    const GEOFENCE_RADIUS = 50.0; // 50 meters
+    
+    // Default simulated coordinates (slightly north-east, inside the geofence)
+    const SIMULATED_LAT = 27.677420;
+    const SIMULATED_LNG = 85.398010;
+
+    // Haversine formula to compute distance in meters
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371e3; // Earth's radius in meters
+        const phi1 = lat1 * Math.PI / 180;
+        const phi2 = lat2 * Math.PI / 180;
+        const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+        const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+
+        const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+                  Math.cos(phi1) * Math.cos(phi2) *
+                  Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return R * c;
+    }
+
+    // Initialize Leaflet Map
+    const map = L.map('map', {
+        zoomControl: false,
+        attributionControl: false
+    }).setView([OFFICE_LAT, OFFICE_LNG], 18);
+
+    // Satellite Tiles (Esri World Imagery)
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri'
+    }).addTo(map);
+
+    // Add Office Marker with Custom styling
+    const officeMarker = L.marker([OFFICE_LAT, OFFICE_LNG]).addTo(map)
+        .bindPopup('<div class="text-on-surface font-body-sm font-semibold text-xs">Night Vision CCTV Nepal</div><div class="text-[10px] text-outline">HQ Office Geofence Center</div>')
+        .openPopup();
+
+    // Add Geofence Circle
+    const geofenceCircle = L.circle([OFFICE_LAT, OFFICE_LNG], {
+        color: '#bff365', // Primary lime color
+        fillColor: '#bff365',
+        fillOpacity: 0.08,
+        weight: 1.5,
+        dashArray: '5, 5',
+        radius: GEOFENCE_RADIUS
+    }).addTo(map);
+
+    // Add User/Unit Location Marker (Lime color dot)
+    const userMarkerIcon = L.divIcon({
+        className: 'relative flex items-center justify-center',
+        html: `
+            <div class="w-8 h-8 rounded-full bg-primary/20 pulse-marker flex items-center justify-center">
+                <div class="w-3.5 h-3.5 bg-primary rounded-full shadow-[0_0_10px_#dcff9e] border border-background"></div>
+            </div>
+        `,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+    });
+
+    const userMarker = L.marker([SIMULATED_LAT, SIMULATED_LNG], { icon: userMarkerIcon }).addTo(map);
+
+    // DOM Elements
+    const userLatEl = document.getElementById('user-lat');
+    const userLngEl = document.getElementById('user-lng');
+    const distMetricEl = document.getElementById('dist-metric');
+    const distProgressEl = document.getElementById('dist-progress');
+    const nodeStatusEl = document.getElementById('node-status');
+    const nodeStatusIconEl = document.getElementById('node-status-icon');
+    const hudXEl = document.getElementById('hud-x');
+    const hudYEl = document.getElementById('hud-y');
+    const checkInBtn = document.getElementById('checkInBtn');
+    const csrfToken = document.getElementById('csrfToken').value;
+
+    function updateLocationUI(lat, lng) {
+        const distance = calculateDistance(lat, lng, OFFICE_LAT, OFFICE_LNG);
+        const isAuthorized = distance <= GEOFENCE_RADIUS;
+
+        userLatEl.textContent = lat.toFixed(6) + '° N';
+        userLngEl.textContent = lng.toFixed(6) + '° E';
+
+        distMetricEl.textContent = distance.toFixed(2) + ' m';
+
+        const progressPercent = Math.max(0, Math.min(100, (1 - (distance / 150)) * 100));
+        distProgressEl.style.width = progressPercent + '%';
+
+        hudXEl.textContent = (lat - OFFICE_LAT).toFixed(6);
+        hudYEl.textContent = (lng - OFFICE_LNG).toFixed(6);
+
+        if (isAuthorized) {
+            nodeStatusEl.textContent = 'AUTHORIZED';
+            nodeStatusEl.className = 'font-headline-md text-primary font-bold text-sm transition-colors';
+            nodeStatusIconEl.textContent = 'verified_user';
+            nodeStatusIconEl.className = 'material-symbols-outlined text-primary text-2xl transition-colors';
+            
+            if (checkInBtn) {
+                checkInBtn.disabled = false;
+                checkInBtn.className = "w-full bg-primary text-on-primary py-3 px-4 font-label-bold text-center uppercase tracking-widest transition-all hover:brightness-110 active:scale-[0.98] pulse-marker geofence-glow border border-primary rounded text-xs cursor-pointer";
+            }
+        } else {
+            nodeStatusEl.textContent = 'OUT OF RANGE';
+            nodeStatusEl.className = 'font-headline-md text-error font-bold text-sm transition-colors';
+            nodeStatusIconEl.textContent = 'gpp_bad';
+            nodeStatusIconEl.className = 'material-symbols-outlined text-error text-2xl transition-colors';
+
+            if (checkInBtn) {
+                checkInBtn.disabled = true;
+                checkInBtn.className = "w-full bg-surface-container text-on-surface-variant/40 py-3 px-4 font-label-bold text-center uppercase tracking-widest border border-outline-variant rounded cursor-not-allowed opacity-50 text-xs";
+            }
+        }
+
+        userMarker.setLatLng([lat, lng]);
+    }
+
+    // Geolocation Watcher
+    if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                updateLocationUI(lat, lng);
+                
+                const bounds = L.latLngBounds([
+                    [OFFICE_LAT, OFFICE_LNG],
+                    [lat, lng]
+                ]);
+                map.fitBounds(bounds.pad(0.15));
+            },
+            (error) => {
+                console.log("Using simulated coordinates:", error);
+                updateLocationUI(SIMULATED_LAT, SIMULATED_LNG);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 5000,
+                maximumAge: 0
+            }
+        );
+    } else {
+        updateLocationUI(SIMULATED_LAT, SIMULATED_LNG);
+    }
+
+    // Connect Click to POST Request
+    if (checkInBtn) {
+        checkInBtn.addEventListener('click', () => {
+            const originalText = checkInBtn.innerText;
+            checkInBtn.innerText = 'AUTHENTICATING...';
+            checkInBtn.disabled = true;
+            checkInBtn.classList.remove('pulse-marker');
+
+            // Send simulated coordinates
+            const lat = userMarker.getLatLng().lat;
+            const lng = userMarker.getLatLng().lng;
+
+            const formData = new FormData();
+            formData.append('latitude', lat);
+            formData.append('longitude', lng);
+            formData.append('csrfmiddlewaretoken', csrfToken);
+
+            fetch('', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.checked_out) {
+                        checkInBtn.innerText = 'CHECK-OUT SUCCESSFUL';
+                    } else {
+                        checkInBtn.innerText = 'CHECK-IN SUCCESSFUL';
+                    }
+                    checkInBtn.style.backgroundColor = '#466600';
+                    checkInBtn.style.color = '#dcff9e';
+                    
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    checkInBtn.innerText = 'FAILED';
+                    setTimeout(() => {
+                        checkInBtn.innerText = originalText;
+                        checkInBtn.disabled = false;
+                        checkInBtn.classList.add('pulse-marker');
+                    }, 2000);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                checkInBtn.innerText = 'ERROR';
+                setTimeout(() => {
+                    checkInBtn.innerText = originalText;
+                    checkInBtn.disabled = false;
+                    checkInBtn.classList.add('pulse-marker');
+                }, 2000);
+            });
+        });
+    }
+</script>
+{% endblock scripts %}

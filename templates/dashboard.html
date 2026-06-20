@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Dashboard Header -->
+<div class="flex justify-between items-end mb-8">
+<div>
+<h3 class="font-headline-lg text-headline-lg text-on-surface">Operations Dashboard</h3>
+<p class="text-on-surface-variant font-body-md mt-1">Unified tactical oversight for HR and Logistics.</p>
+</div>
+<div class="text-right">
+<p class="font-tabular-numeric text-headline-sm text-primary-fixed-dim" id="live-clock">08:42:15 AM</p>
+<p class="text-label-bold text-on-surface-variant uppercase tracking-tighter">System Server Time</p>
+</div>
+</div>
+<div class="bento-grid">
+<!-- Widget A: Geofencing Control -->
+<div class="col-span-12 md:col-span-4 bg-surface-container-low border border-outline-variant p-6 flex flex-col justify-between min-h-[300px] relative overflow-hidden group">
+<div class="absolute -right-8 -top-8 opacity-5 group-hover:opacity-10 transition-opacity">
+<span class="material-symbols-outlined text-[160px]">location_on</span>
+</div>
+<div>
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-primary-fixed">distance</span>
+<h4 class="font-label-bold text-label-bold text-on-surface uppercase tracking-widest">Geofencing Control</h4>
+</div>
+<div class="space-y-4">
+<div class="bg-surface-container-lowest p-4 border-l-4 border-primary-fixed">
+<p class="text-[10px] text-on-surface-variant uppercase font-bold mb-1">Current Zone</p>
+<p class="font-body-lg text-on-surface font-semibold">Night Vision CCTV Nepal</p>
+<p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-xs text-primary-fixed">verified</span> 
+                                    Within 50m of designated radius
+                                </p>
+</div>
+</div>
+</div>
+<div class="mt-8">
+<button class="w-full bg-primary-container text-on-primary-container font-headline-sm py-4 rounded flex items-center justify-center gap-3 active:scale-95 transition-transform hover:brightness-110" id="checkActionBtn" onclick="toggleCheck()">
+<span class="material-symbols-outlined" id="btnIcon">login</span>
+<span id="btnText">Check In</span>
+</button>
+<div class="flex justify-between items-center mt-4 px-1">
+<p class="text-xs text-on-surface-variant">Last activity: <span class="font-tabular-numeric" id="last-activity">09:12 PM Yesterday</span></p>
+</div>
+</div>
+</div>
+<!-- Widget B: Quick Actions -->
+<div class="col-span-12 md:col-span-8 bg-surface-container-highest border border-outline-variant p-6 min-h-[300px] flex flex-col justify-center relative overflow-hidden">
+<div class="absolute -left-12 -bottom-12 opacity-[0.03]">
+<span class="material-symbols-outlined text-[240px]">settings_suggest</span>
+</div>
+<h4 class="font-label-bold text-label-bold text-on-surface uppercase tracking-widest mb-6 relative z-10">System Shortcuts</h4>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 relative z-10">
+<a href="{% url 'user_create' %}" class="bg-surface-container hover:bg-surface-variant cursor-pointer p-4 border border-outline-variant flex flex-col items-center justify-center gap-3 transition-colors group">
+<div class="w-12 h-12 rounded-full bg-surface-container-lowest flex items-center justify-center group-hover:bg-primary-container transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-on-primary-container">person_add</span>
+</div>
+<span class="font-label-bold text-[10px] uppercase tracking-wider text-on-surface text-center">New Hire</span>
+</a>
+<a href="{% url 'inventory_list' %}" class="bg-surface-container hover:bg-surface-variant cursor-pointer p-4 border border-outline-variant flex flex-col items-center justify-center gap-3 transition-colors group">
+<div class="w-12 h-12 rounded-full bg-surface-container-lowest flex items-center justify-center group-hover:bg-primary-container transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-on-primary-container">inventory_2</span>
+</div>
+<span class="font-label-bold text-[10px] uppercase tracking-wider text-on-surface text-center">Audit Stock</span>
+</a>
+<a href="{% url 'accounts_receivable' %}" class="bg-surface-container hover:bg-surface-variant cursor-pointer p-4 border border-outline-variant flex flex-col items-center justify-center gap-3 transition-colors group">
+<div class="w-12 h-12 rounded-full bg-surface-container-lowest flex items-center justify-center group-hover:bg-primary-container transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-on-primary-container">receipt_long</span>
+</div>
+<span class="font-label-bold text-[10px] uppercase tracking-wider text-on-surface text-center">Expenses</span>
+</a>
+<a href="#" onclick="alert('IT Tickets module is currently under development.'); return false;" class="bg-surface-container hover:bg-surface-variant cursor-pointer p-4 border border-outline-variant flex flex-col items-center justify-center gap-3 transition-colors group">
+<div class="w-12 h-12 rounded-full bg-surface-container-lowest flex items-center justify-center group-hover:bg-primary-container transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-on-primary-container">support_agent</span>
+</div>
+<span class="font-label-bold text-[10px] uppercase tracking-wider text-on-surface text-center">IT Ticket</span>
+</a>
+</div>
+</div>
+
+<!-- Widget C: Missing Attendance -->
+<div class="col-span-12 md:col-span-6 bg-surface-container-low border border-outline-variant p-6 min-h-[250px] relative overflow-hidden group">
+    <div class="flex items-center gap-2 mb-4 pb-3 border-b border-outline-variant">
+        <span class="material-symbols-outlined text-warning">person_off</span>
+        <h4 class="font-label-bold text-label-bold text-on-surface uppercase tracking-widest">Pending Check-Ins</h4>
+    </div>
+    <div class="max-h-48 overflow-y-auto space-y-2 pr-2">
+        {% for user in missing_attendance_users %}
+        <div class="flex items-center justify-between bg-surface-container-highest p-2 rounded border border-outline-variant/50 hover:border-warning/30 transition-colors">
+            <div class="flex items-center gap-3">
+                {% if user.profile_image %}
+                <img src="{{ user.profile_image }}" class="w-8 h-8 rounded-full object-cover">
+                {% else %}
+                <span class="w-8 h-8 rounded-full bg-warning/20 text-warning flex items-center justify-center font-bold text-xs">{{ user.full_name|make_list|first|upper }}</span>
+                {% endif %}
+                <div>
+                    <p class="text-xs font-bold text-on-surface">{{ user.full_name }}</p>
+                    <p class="text-[10px] text-on-surface-variant">{{ user.position }}</p>
+                </div>
+            </div>
+            <span class="text-[9px] font-bold uppercase tracking-wider text-warning bg-warning/10 px-2 py-0.5 rounded border border-warning/20">Not Checked In</span>
+        </div>
+        {% empty %}
+        <div class="text-center py-6 border border-dashed border-outline-variant/50 rounded bg-background/30">
+            <span class="material-symbols-outlined text-outline text-2xl mb-1">check_circle</span>
+            <p class="text-[11px] text-outline font-medium">All staff have checked in today.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Widget D: On Leave Today -->
+<div class="col-span-12 md:col-span-6 bg-surface-container-low border border-outline-variant p-6 min-h-[250px] relative overflow-hidden group">
+    <div class="flex items-center gap-2 mb-4 pb-3 border-b border-outline-variant">
+        <span class="material-symbols-outlined text-info">flight_takeoff</span>
+        <h4 class="font-label-bold text-label-bold text-on-surface uppercase tracking-widest">On Leave Today</h4>
+    </div>
+    <div class="max-h-48 overflow-y-auto space-y-2 pr-2">
+        {% for leave in on_leave_today %}
+        <div class="flex items-center justify-between bg-surface-container-highest p-2 rounded border border-outline-variant/50 hover:border-info/30 transition-colors">
+            <div class="flex items-center gap-3">
+                <span class="w-8 h-8 rounded-full bg-info/20 text-info flex items-center justify-center font-bold text-xs">{{ leave.employee_name|make_list|first|upper }}</span>
+                <div>
+                    <p class="text-xs font-bold text-on-surface">{{ leave.employee_name }}</p>
+                    <p class="text-[10px] text-on-surface-variant">{{ leave.leave_type }} Leave</p>
+                </div>
+            </div>
+            <span class="text-[9px] font-bold uppercase tracking-wider text-info bg-info/10 px-2 py-0.5 rounded border border-info/20">Approved</span>
+        </div>
+        {% empty %}
+        <div class="text-center py-6 border border-dashed border-outline-variant/50 rounded bg-background/30">
+            <span class="material-symbols-outlined text-outline text-2xl mb-1">event_available</span>
+            <p class="text-[11px] text-outline font-medium">No one is on leave today.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Widget E: Calendar Integration -->
+<div class="col-span-12 md:col-span-12 bg-surface-container border border-outline-variant p-6">
+    <div class="flex justify-between items-center mb-6">
+        <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary-fixed">calendar_month</span>
+            <h4 class="font-label-bold text-label-bold text-on-surface uppercase tracking-widest">Corporate Calendar (English)</h4>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-4 bg-surface-container-lowest px-4 py-2 rounded border border-outline-variant">
+                <a href="?year={{ prev_year }}&month={{ prev_month }}" class="material-symbols-outlined text-on-surface-variant hover:text-primary-fixed text-sm">chevron_left</a>
+                <span class="font-label-bold text-on-surface w-32 text-center">{{ month_name }} {{ year }}</span>
+                <a href="?year={{ next_year }}&month={{ next_month }}" class="material-symbols-outlined text-on-surface-variant hover:text-primary-fixed text-sm">chevron_right</a>
+            </div>
+            <!-- Add Event Button for Admin -->
+            {% if request.session.active_role in 'CEO,COO,HR,Operation Head,CITO' %}
+            <button onclick="toggleEventModal()" class="flex items-center gap-1.5 bg-primary text-on-primary hover:brightness-110 px-4 py-2 rounded border border-primary transition-all text-xs font-label-bold uppercase tracking-wider">
+                <span class="material-symbols-outlined text-sm">add</span>
+                Add Event
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="overflow-x-auto pb-2">
+        <div class="min-w-[500px] grid grid-cols-7 gap-2">
+            <!-- Day Headers -->
+            <div class="text-center font-label-bold text-[10px] text-on-surface-variant py-2">SUN</div>
+            <div class="text-center font-label-bold text-[10px] text-on-surface-variant py-2">MON</div>
+            <div class="text-center font-label-bold text-[10px] text-on-surface-variant py-2">TUE</div>
+            <div class="text-center font-label-bold text-[10px] text-on-surface-variant py-2">WED</div>
+            <div class="text-center font-label-bold text-[10px] text-on-surface-variant py-2">THU</div>
+            <div class="text-center font-label-bold text-[10px] text-on-surface-variant py-2">FRI</div>
+            <div class="text-center font-label-bold text-[10px] text-error py-2">SAT</div>
+
+            <!-- Calendar Grid -->
+            {% for week in weeks %}
+                {% for day in week %}
+                    {% if not day.is_current_month %}
+                        <!-- Out of month day -->
+                        <div class="aspect-square flex flex-col justify-between items-end border border-outline-variant/30 bg-surface-container-lowest/50 opacity-40 p-2 cursor-not-allowed">
+                            <span class="font-tabular-numeric text-[11px] text-on-surface-variant/70">{{ day.day_num }}</span>
+                        </div>
+                    {% else %}
+                        <!-- In month day -->
+                        <div class="aspect-square flex flex-col justify-between items-end border {% if day.is_holiday %}border-error/50 bg-error/10{% elif day.is_today %}border-2 border-primary-fixed bg-primary-container/10{% else %}border-outline-variant bg-surface-container-low hover:bg-surface-variant{% endif %} transition-colors cursor-pointer p-2 relative group"
+                             {% if day.events %}title="{% for event in day.events %}{{ event.title }}{% if event.description %}: {{ event.description }}{% endif %}&#10;{% endfor %}"{% endif %}>
+                            
+                            {% if day.is_today %}
+                                <div class="absolute top-2 left-2 w-1.5 h-1.5 bg-primary-fixed rounded-full animate-ping"></div>
+                                <div class="absolute top-2 left-2 w-1.5 h-1.5 bg-primary-fixed rounded-full"></div>
+                            {% endif %}
+                            
+                            <!-- Events indicator/details inside the cell -->
+                            <div class="absolute bottom-2 left-2 flex flex-col gap-1 w-[calc(100%-16px)] overflow-hidden">
+                                {% for event in day.events %}
+                                    <div class="flex items-center gap-1 w-full {% if '[HOLIDAY]' in event.title %}bg-error/20 border-error/50{% else %}bg-surface-container-highest/80 border-outline-variant{% endif %} border px-1 py-0.5 rounded backdrop-blur-sm group/event relative">
+                                        <span class="w-1 h-1 {% if '[HOLIDAY]' in event.title %}bg-error{% else %}bg-primary{% endif %} rounded-full shrink-0"></span>
+                                        <span class="text-[8px] {% if '[HOLIDAY]' in event.title %}text-error{% else %}text-on-surface{% endif %} font-semibold tracking-tighter truncate leading-none block max-w-full" style="font-size: 7px;">{{ event.title|cut:"[HOLIDAY] "|upper }}</span>
+                                        
+                                        {% if request.session.active_role in 'CEO,COO,HR,Operation Head,CITO' %}
+                                        <button type="button" onclick="event.stopPropagation(); confirmDelete('{% url 'dashboard' %}', 'Delete Calendar Event', 'Are you sure you want to delete this event? This action will remove it from the calendar.', { action: 'delete_event', event_id: '{{ event.id }}' })" class="absolute right-0 top-0 bottom-0 bg-error text-on-error px-1 flex items-center justify-center opacity-0 group-hover/event:opacity-100 transition-opacity cursor-pointer z-10">
+                                            <span class="material-symbols-outlined text-[10px] hover:scale-110">close</span>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <span class="font-tabular-numeric text-xs {% if day.is_holiday %}text-error font-bold{% elif day.is_today %}text-primary-fixed font-bold{% elif day.date.weekday == 5 %}text-error font-semibold{% else %}text-on-surface{% endif %}">{{ day.day_num }}</span>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Add Event Modal -->
+<div id="eventModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+    <div class="bg-surface-container border border-outline-variant p-6 rounded-lg w-full max-w-md shadow-2xl relative">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-headline-sm text-headline-sm text-primary-fixed uppercase tracking-wider">Add Calendar Event</h3>
+            <button onclick="toggleEventModal()" class="material-symbols-outlined text-on-surface-variant hover:text-primary">close</button>
+        </div>
+        <form method="POST" action="">
+            {% csrf_token %}
+            <input type="hidden" name="year" value="{{ year }}">
+            <input type="hidden" name="month" value="{{ month }}">
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps mb-1">EVENT TITLE</label>
+                    <input type="text" name="title" required class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed" placeholder="e.g., Security Review">
+                </div>
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps mb-1">DATE</label>
+                    <input type="date" name="date" required class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed">
+                </div>
+                <div class="flex items-center gap-2 mt-2">
+                    <input type="checkbox" name="is_holiday" id="is_holiday" class="rounded border-outline-variant text-error focus:ring-error bg-surface-container-lowest">
+                    <label for="is_holiday" class="text-xs text-on-surface-variant font-semibold">Mark as Company Holiday</label>
+                </div>
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps mb-1">DESCRIPTION</label>
+                    <textarea name="description" rows="3" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed" placeholder="Optional details..."></textarea>
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-outline-variant">
+                <button type="button" onclick="toggleEventModal()" class="px-4 py-2 border border-outline-variant text-on-surface-variant hover:bg-surface-variant rounded transition-all text-xs font-label-caps uppercase tracking-wider">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-primary text-on-primary hover:brightness-110 rounded transition-all text-xs font-label-caps uppercase tracking-wider">Save Event</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block scripts %}
+<script>
+    function toggleEventModal() {
+        const modal = document.getElementById('eventModal');
+        if (modal) {
+            modal.classList.toggle('hidden');
+        }
+    }
+
+    // Geolocation and Haversine Distance Logic
+    const OFFICE_LAT = 27.6773098;
+    const OFFICE_LNG = 85.3979076;
+    const GEOFENCE_RADIUS = 50.0; // 50 meters
+    const checkBtn = document.getElementById('checkActionBtn');
+    
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371e3; // Earth's radius in meters
+        const phi1 = lat1 * Math.PI / 180;
+        const phi2 = lat2 * Math.PI / 180;
+        const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+        const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+
+        const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+                  Math.cos(phi1) * Math.cos(phi2) *
+                  Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return R * c;
+    }
+
+    if (navigator.geolocation && checkBtn) {
+        // Initial Loading State
+        checkBtn.disabled = true;
+        checkBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">sync</span> Locating GPS...`;
+        checkBtn.classList.replace('bg-primary-container', 'bg-surface-container-highest');
+        checkBtn.classList.replace('text-on-primary-container', 'text-on-surface-variant');
+        checkBtn.classList.add('cursor-not-allowed', 'opacity-70');
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const distance = calculateDistance(position.coords.latitude, position.coords.longitude, OFFICE_LAT, OFFICE_LNG);
+                if (distance <= GEOFENCE_RADIUS) {
+                    checkBtn.disabled = false;
+                    checkBtn.innerHTML = `<span class="material-symbols-outlined">login</span> Check In`;
+                    checkBtn.classList.replace('bg-surface-container-highest', 'bg-primary-container');
+                    checkBtn.classList.replace('text-on-surface-variant', 'text-on-primary-container');
+                    checkBtn.classList.remove('cursor-not-allowed', 'opacity-70');
+                } else {
+                    checkBtn.disabled = true;
+                    checkBtn.innerHTML = `<span class="material-symbols-outlined">gpp_bad</span> Out of Range (${distance.toFixed(0)}m)`;
+                    checkBtn.classList.replace('bg-surface-container-highest', 'bg-error');
+                    checkBtn.classList.replace('text-on-surface-variant', 'text-on-error');
+                    checkBtn.classList.add('cursor-not-allowed');
+                }
+            },
+            (error) => {
+                checkBtn.disabled = true;
+                checkBtn.innerHTML = `<span class="material-symbols-outlined">location_off</span> GPS Required`;
+                checkBtn.classList.add('cursor-not-allowed');
+                console.warn('Geolocation error:', error);
+                
+                // Fallback simulation for demo purposes if GPS is denied/unavailable
+                const simDist = calculateDistance(27.677420, 85.398010, OFFICE_LAT, OFFICE_LNG);
+                setTimeout(() => {
+                    if (simDist <= GEOFENCE_RADIUS) {
+                        checkBtn.disabled = false;
+                        checkBtn.innerHTML = `<span class="material-symbols-outlined">login</span> Check In (Simulated)`;
+                        checkBtn.classList.replace('bg-surface-container-highest', 'bg-primary-container');
+                        checkBtn.classList.replace('text-on-surface-variant', 'text-on-primary-container');
+                        checkBtn.classList.remove('cursor-not-allowed', 'opacity-70');
+                    }
+                }, 2000);
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    }
+
+    function toggleCheck() {
+        if(!checkBtn.disabled) {
+            checkBtn.innerHTML = `<span class="material-symbols-outlined">check_circle</span> Checked In`;
+            checkBtn.classList.replace('bg-primary-container', 'bg-primary');
+            checkBtn.classList.replace('text-on-primary-container', 'text-on-primary');
+            checkBtn.disabled = true;
+            checkBtn.classList.add('cursor-not-allowed');
+        }
+    }
+</script>
+{% endblock scripts %}

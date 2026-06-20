@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>Nightvision HQ - Secure Gateway</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: "#0a0f1c",
+                        surface: "#121b2d",
+                        "surface-variant": "#1e293b",
+                        primary: "#0ea5e9",
+                        "primary-fixed": "#38bdf8",
+                        accent: "#10b981",
+                        error: "#ef4444",
+                    },
+                    fontFamily: {
+                        headline: ['Outfit', 'sans-serif'],
+                        body: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    animation: {
+                        'grid-flow': 'gridFlow 20s linear infinite',
+                        'pulse-glow': 'pulseGlow 3s ease-in-out infinite alternate',
+                        'scanline': 'scanline 8s linear infinite',
+                    },
+                    keyframes: {
+                        gridFlow: {
+                            '0%': { transform: 'translateY(0)' },
+                            '100%': { transform: 'translateY(50px)' },
+                        },
+                        pulseGlow: {
+                            '0%': { opacity: 0.4, transform: 'scale(1)' },
+                            '100%': { opacity: 0.8, transform: 'scale(1.1)' },
+                        },
+                        scanline: {
+                            '0%': { transform: 'translateY(-100%)' },
+                            '100%': { transform: 'translateY(100vh)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #0a0f1c; color: #f8fafc; font-family: 'Inter', sans-serif; overflow-x: hidden; overflow-y: auto; }
+        
+        .glass-panel {
+            background: rgba(18, 27, 45, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(14, 165, 233, 0.2);
+            box-shadow: 0 0 40px rgba(14, 165, 233, 0.1), inset 0 0 20px rgba(14, 165, 233, 0.05);
+        }
+
+        .tech-grid {
+            position: absolute;
+            inset: -100%;
+            background-image: 
+                linear-gradient(to right, rgba(14, 165, 233, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(14, 165, 233, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            transform: perspective(500px) rotateX(60deg);
+            transform-origin: top;
+        }
+
+        .input-glow:focus-within {
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.3);
+            border-color: rgba(14, 165, 233, 0.8);
+        }
+    </style>
+</head>
+<body class="min-h-[100dvh] flex items-center justify-center relative p-4">
+    
+    <!-- Animated Cyber Grid Background -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none">
+        <div class="tech-grid animate-grid-flow"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background"></div>
+    </div>
+
+    <!-- Glowing Orbs -->
+    <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[100px] animate-pulse-glow"></div>
+    <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-[100px] animate-pulse-glow" style="animation-delay: 1.5s;"></div>
+
+    <!-- Vertical Scanline Effect -->
+    <div class="absolute inset-0 w-full h-[2px] bg-primary/30 shadow-[0_0_10px_rgba(14,165,233,0.8)] animate-scanline pointer-events-none z-50"></div>
+
+    <div class="glass-panel p-6 md:p-10 rounded-2xl w-full max-w-md z-10 relative overflow-hidden group my-8">
+        <!-- Top Tech Bar -->
+        <div class="absolute top-0 left-0 w-full h-1 bg-surface-variant flex">
+            <div class="h-full bg-primary w-1/3 shadow-[0_0_10px_rgba(14,165,233,1)]"></div>
+            <div class="h-full bg-accent w-1/4 ml-auto shadow-[0_0_10px_rgba(16,185,129,1)]"></div>
+        </div>
+        
+        <div class="flex justify-center mb-6">
+            <div class="w-20 h-20 rounded-xl bg-surface/80 border border-primary/30 flex items-center justify-center shadow-[0_0_20px_rgba(14,165,233,0.2)] group-hover:shadow-[0_0_30px_rgba(14,165,233,0.4)] transition-all duration-500 relative">
+                <span class="material-symbols-outlined text-primary text-5xl z-10">fingerprint</span>
+                <!-- Corner accents on logo box -->
+                <div class="absolute top-0 left-0 w-2 h-2 border-t border-l border-primary"></div>
+                <div class="absolute top-0 right-0 w-2 h-2 border-t border-r border-primary"></div>
+                <div class="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-primary"></div>
+                <div class="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-primary"></div>
+            </div>
+        </div>
+        
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-headline font-bold tracking-tight text-white mb-1">NIGHTVISION<span class="text-primary">_HQ</span></h1>
+            <p class="text-primary-fixed/70 font-mono text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
+                Secure Uplink Established
+            </p>
+        </div>
+
+        {% if error %}
+        <div class="mb-6 p-3 bg-error/10 border border-error/30 rounded-lg flex items-center gap-3 animate-[pulse_1s_ease-in-out]">
+            <span class="material-symbols-outlined text-error text-sm">gpp_bad</span>
+            <span class="text-error text-sm font-medium">{{ error }}</span>
+        </div>
+        {% endif %}
+
+        <form action="{% url 'login' %}" method="POST" class="space-y-5">
+            {% csrf_token %}
+            
+            <!-- Identity Token -->
+            <div class="relative">
+                <label class="block text-[10px] font-mono text-primary/80 uppercase tracking-widest mb-1.5 ml-1">Identity Token [UID / Name]</label>
+                <div class="relative input-glow transition-all rounded-lg border border-white/10 bg-surface/50">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-primary/50 text-sm">terminal</span>
+                    <input type="text" name="login_id" required placeholder="Enter Identifier" 
+                           class="w-full bg-transparent py-3 pl-10 pr-4 text-white placeholder-slate-600 focus:outline-none font-mono text-sm">
+                </div>
+            </div>
+
+            <!-- Password / Access Key -->
+            <div class="relative">
+                <label class="block text-[10px] font-mono text-primary/80 uppercase tracking-widest mb-1.5 ml-1">Access Key</label>
+                <div class="relative input-glow transition-all rounded-lg border border-white/10 bg-surface/50">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-primary/50 text-sm">key</span>
+                    <input type="password" name="password" required placeholder="••••••••" 
+                           class="w-full bg-transparent py-3 pl-10 pr-4 text-white placeholder-slate-600 focus:outline-none font-mono text-sm tracking-widest">
+                </div>
+            </div>
+            
+            <button type="submit" class="w-full bg-primary/10 hover:bg-primary/20 border border-primary/50 hover:border-primary text-primary-fixed font-mono font-bold py-3.5 rounded-lg transition-all flex items-center justify-center gap-3 mt-8 relative overflow-hidden group">
+                <div class="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/20 to-primary/0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                <span class="material-symbols-outlined text-sm">vpn_key</span>
+                INITIATE HANDSHAKE
+            </button>
+        </form>
+    </div>
+
+    <!-- Decorative Corner Elements -->
+    <div class="absolute top-6 left-6 font-mono text-[10px] text-primary/40 tracking-widest pointer-events-none">SYS.NV.4092 // ACTIVE</div>
+    <div class="absolute bottom-6 right-6 font-mono text-[10px] text-primary/40 tracking-widest pointer-events-none">ENCRYPTION: AES-256</div>
+    <div class="absolute bottom-6 left-6 border-l-2 border-b-2 border-primary/30 w-12 h-12"></div>
+    <div class="absolute top-6 right-6 border-r-2 border-t-2 border-primary/30 w-12 h-12"></div>
+
+    <style>
+        @keyframes shimmer {
+            100% { transform: translateX(100%); }
+        }
+    </style>
+</body>
+</html>

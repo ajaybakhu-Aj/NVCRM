@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex justify-between items-end mb-6">
+    <div>
+        <h3 class="font-headline-lg text-headline-lg text-on-surface">Point of Sale (POS)</h3>
+        <p class="text-on-surface-variant font-body-md mt-1">Direct checkout module connected to Inventory & Accounts.</p>
+    </div>
+</div>
+
+{% if messages %}
+<div class="mb-6">
+    {% for message in messages %}
+    <div class="p-4 rounded border {% if message.tags == 'error' %}bg-error/10 border-error text-error{% else %}bg-primary/10 border-primary text-primary{% endif %} font-label-bold flex items-center gap-2">
+        <span class="material-symbols-outlined">{% if message.tags == 'error' %}error{% else %}check_circle{% endif %}</span>
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="flex flex-col lg:flex-row gap-6 lg:h-[calc(100vh-180px)] min-h-[calc(100vh-180px)]">
+    <!-- Left Panel: Products Grid -->
+    <div class="w-full lg:w-2/3 bg-surface-container border border-outline-variant p-6 overflow-y-auto rounded-lg">
+        <div class="flex items-center gap-3 mb-6">
+            <span class="material-symbols-outlined text-primary-fixed">storefront</span>
+            <h4 class="font-label-bold text-label-bold text-on-surface uppercase tracking-widest">Available Inventory</h4>
+        </div>
+        
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {% for item in inventory %}
+            <div class="bg-surface-container-low border border-outline-variant rounded-xl p-4 hover:bg-surface-variant transition-all group flex flex-col justify-between cursor-pointer {% if item.quantity_on_hand == 0 %}opacity-50 pointer-events-none{% endif %}" onclick="addToCart('{{ item.stock_record_id }}', '{{ item.sku_id }}', '{{ item.product_name|escapejs }}', {{ item.price }}, {{ item.quantity_on_hand }})">
+                
+                <div class="w-full h-32 rounded-lg overflow-hidden bg-surface-container mb-4 flex items-center justify-center border border-outline-variant/50">
+                    {% if item.product_image %}
+                        <img src="{{ item.product_image }}" alt="{{ item.product_name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                    {% else %}
+                        <span class="material-symbols-outlined text-5xl text-outline-variant group-hover:text-primary-fixed transition-colors">videocam</span>
+                    {% endif %}
+                </div>
+
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <span class="bg-primary/20 text-primary-fixed px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase">{{ item.sku_id }}</span>
+                        <p class="text-on-surface font-semibold text-sm mt-1 line-clamp-1">{{ item.product_name }}</p>
+                    </div>
+                </div>
+                <div class="flex justify-between items-end">
+                    <span class="text-xs text-on-surface-variant font-label-bold uppercase"><span class="text-primary">{{ item.quantity_on_hand }}</span> In Stock</span>
+                    <span class="font-data-mono text-lg font-bold text-on-surface">Rs. {{ item.price|floatformat:2 }}</span>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-on-surface-variant text-sm col-span-full">No fresh inventory available for sale.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Right Panel: Cart & Checkout -->
+    <div class="w-full lg:w-1/3 bg-surface-container-high border border-outline-variant p-6 flex flex-col justify-between rounded-lg">
+        <div>
+            <div class="flex items-center gap-3 mb-6 pb-4 border-b border-outline-variant">
+                <span class="material-symbols-outlined text-primary-fixed">shopping_cart</span>
+                <h4 class="font-label-bold text-label-bold text-on-surface uppercase tracking-widest">Current Cart</h4>
+                <span id="cart-count" class="ml-auto bg-primary text-on-primary rounded-full px-2 py-0.5 text-xs font-bold">0</span>
+            </div>
+            
+            <div id="cart-items" class="space-y-3 overflow-y-auto max-h-[300px] mb-6">
+                <p id="empty-cart-msg" class="text-on-surface-variant text-sm italic">Cart is currently empty. Click items to add.</p>
+                <!-- Cart items will be injected here via JS -->
+            </div>
+        </div>
+        
+        <div>
+            <div class="border-t border-outline-variant pt-4 mb-6">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-on-surface-variant text-sm font-semibold uppercase tracking-wider">Subtotal</span>
+                    <span id="cart-subtotal" class="text-on-surface font-data-mono">Rs. 0.00</span>
+                </div>
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-on-surface-variant text-sm font-semibold uppercase tracking-wider">Discount</span>
+                    <div class="flex items-center gap-1">
+                        <span class="text-on-surface-variant text-sm font-data-mono">Rs.</span>
+                        <input type="number" id="cart-discount" value="0" min="0" step="0.01" onchange="renderCart()" onkeyup="renderCart()" class="w-16 bg-surface-container-lowest border border-outline-variant text-on-surface text-right p-1 rounded font-data-mono focus:outline-none focus:border-primary-fixed">
+                    </div>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-on-surface font-bold uppercase tracking-wider">Total Due</span>
+                    <span id="cart-total" class="text-primary-fixed font-data-mono text-xl font-bold">Rs. 0.00</span>
+                </div>
+            </div>
+            
+            <form method="POST" action="{% url 'pos_checkout' %}" id="checkout-form" class="space-y-3" onsubmit="return submitCheckout(event)">
+                {% csrf_token %}
+                <input type="hidden" name="cart_data" id="cart_data_input">
+                <input type="hidden" name="total_amount" id="total_amount_input">
+                <input type="hidden" name="discount" id="discount_amount_input">
+                
+                <div class="border-t border-outline-variant pt-3 mb-4">
+                    <p class="text-xs font-label-bold text-on-surface-variant uppercase tracking-wider mb-3">Customer Billing Info</p>
+                    <input type="text" name="customer_name" placeholder="Customer Name" required class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 text-sm rounded focus:outline-none focus:border-primary-fixed mb-2">
+                    <input type="text" name="customer_pan" placeholder="PAN / VAT Number" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 text-sm rounded focus:outline-none focus:border-primary-fixed mb-2">
+                    <input type="text" name="customer_phone" placeholder="Phone Number" required class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 text-sm rounded focus:outline-none focus:border-primary-fixed mb-2">
+                    <input type="text" name="customer_address" placeholder="Billing Address" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 text-sm rounded focus:outline-none focus:border-primary-fixed mb-4">
+                    <select name="payment_method" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 text-sm rounded focus:outline-none focus:border-primary-fixed mb-2">
+                        <option value="Cash">Payment: Cash</option>
+                        <option value="Cheque">Payment: Cheque</option>
+                        <option value="Credit">Payment: Credit (Unpaid)</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="w-full bg-primary text-on-primary py-4 rounded-lg font-label-bold uppercase tracking-widest hover:brightness-110 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20 cursor-pointer">
+                    <span class="material-symbols-outlined">point_of_sale</span>
+                    Process Sale
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block scripts %}
+<script>
+    let cart = {};
+    
+    function addToCart(stockId, sku, name, price, maxQty) {
+        if (!cart[stockId]) {
+            cart[stockId] = {sku: sku, name: name, price: price, qty: 1, max: maxQty};
+        } else {
+            if (cart[stockId].qty < maxQty) {
+                cart[stockId].qty++;
+            } else {
+                alert("Cannot exceed available stock!");
+            }
+        }
+        renderCart();
+    }
+    
+    function updateQty(stockId, delta) {
+        if (cart[stockId]) {
+            cart[stockId].qty += delta;
+            if (cart[stockId].qty <= 0) {
+                delete cart[stockId];
+            } else if (cart[stockId].qty > cart[stockId].max) {
+                cart[stockId].qty = cart[stockId].max;
+            }
+            renderCart();
+        }
+    }
+    
+    function renderCart() {
+        const cartEl = document.getElementById('cart-items');
+        const subtotalEl = document.getElementById('cart-subtotal');
+        const totalEl = document.getElementById('cart-total');
+        const dataInput = document.getElementById('cart_data_input');
+        const totalInput = document.getElementById('total_amount_input');
+        const discountField = document.getElementById('cart-discount');
+        const discountInput = document.getElementById('discount_amount_input');
+        
+        cartEl.innerHTML = '';
+        let totalItems = 0;
+        let subtotalPrice = 0;
+        
+        for (const [id, item] of Object.entries(cart)) {
+            totalItems++;
+            subtotalPrice += item.price * item.qty;
+            
+            cartEl.innerHTML += `
+                <div class="flex justify-between items-center border-b border-outline-variant pb-3 mb-3">
+                    <div>
+                        <p class="font-bold text-on-surface text-sm">${item.name}</p>
+                        <p class="text-on-surface-variant text-[10px] tracking-wider">${item.sku} | Rs. ${item.price.toFixed(2)}</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="updateQty('${id}', -1)" class="w-6 h-6 rounded bg-surface-variant text-on-surface flex items-center justify-center hover:bg-outline-variant">-</button>
+                        <span class="font-data-mono text-sm w-4 text-center">${item.qty}</span>
+                        <button onclick="updateQty('${id}', 1)" class="w-6 h-6 rounded bg-surface-variant text-on-surface flex items-center justify-center hover:bg-outline-variant">+</button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        if (totalItems === 0) {
+            cartEl.innerHTML = '<p class="text-on-surface-variant text-sm text-center italic">Cart is empty</p>';
+        }
+        
+        let discount = parseFloat(discountField.value) || 0;
+        if (discount > subtotalPrice) {
+            discount = subtotalPrice;
+            discountField.value = discount.toFixed(2);
+        }
+        let finalPrice = subtotalPrice - discount;
+        
+        subtotalEl.innerText = `Rs. ${subtotalPrice.toFixed(2)}`;
+        totalEl.innerText = `Rs. ${finalPrice.toFixed(2)}`;
+        
+        dataInput.value = JSON.stringify(cart);
+        totalInput.value = finalPrice.toFixed(2);
+        discountInput.value = discount.toFixed(2);
+    }
+    
+    function submitCheckout(e) {
+        if (Object.keys(cart).length === 0) {
+            alert("Cart is empty! Add items before processing.");
+            if(e) e.preventDefault();
+            return false;
+        }
+        return true;
+    }
+</script>
+{% endblock scripts %}

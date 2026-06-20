@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Header and Actions -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
+    <div>
+        <h3 class="font-headline-lg text-headline-lg text-on-surface">Procurement Workflows</h3>
+        <p class="text-on-surface-variant font-body-md mt-1">Multi-stage corporate purchase authorization pipelines and signature tracking.</p>
+    </div>
+    <div class="flex gap-2">
+        <button onclick="openProcurementModal()" class="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-bold text-label-bold flex items-center gap-2 hover:scale-95 transition-transform cursor-pointer">
+            <span class="material-symbols-outlined text-lg">add_shopping_cart</span>
+            NEW REQUEST
+        </button>
+    </div>
+</div>
+
+<!-- Procurement KPI Overview Cards -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="bg-surface-container border border-outline-variant p-4 rounded-xl flex items-center gap-4">
+        <div class="w-10 h-10 rounded bg-primary/10 flex items-center justify-center text-primary">
+            <span class="material-symbols-outlined">shopping_bag</span>
+        </div>
+        <div>
+            <p class="text-[10px] text-outline font-label-caps uppercase tracking-wider">Total Requests</p>
+            <h4 class="font-headline-md text-headline-md text-on-surface mt-0.5">{{ total_count }}</h4>
+        </div>
+    </div>
+    <div class="bg-surface-container border border-outline-variant p-4 rounded-xl flex items-center gap-4">
+        <div class="w-10 h-10 rounded bg-success-container/20 flex items-center justify-center text-success">
+            <span class="material-symbols-outlined">task_alt</span>
+        </div>
+        <div>
+            <p class="text-[10px] text-outline font-label-caps uppercase tracking-wider">Completed / Signed</p>
+            <h4 class="font-headline-md text-headline-md text-on-surface mt-0.5">{{ completed_count }}</h4>
+        </div>
+    </div>
+    <div class="bg-surface-container border border-outline-variant p-4 rounded-xl flex items-center gap-4">
+        <div class="w-10 h-10 rounded bg-info-container/20 flex items-center justify-center text-info">
+            <span class="material-symbols-outlined">local_shipping</span>
+        </div>
+        <div>
+            <p class="text-[10px] text-outline font-label-caps uppercase tracking-wider">Pending Local</p>
+            <h4 class="font-headline-md text-headline-md text-on-surface mt-0.5">{{ pending_local }}</h4>
+        </div>
+    </div>
+    <div class="bg-surface-container border border-outline-variant p-4 rounded-xl flex items-center gap-4">
+        <div class="w-10 h-10 rounded bg-warning-container/20 flex items-center justify-center text-warning">
+            <span class="material-symbols-outlined">public</span>
+        </div>
+        <div>
+            <p class="text-[10px] text-outline font-label-caps uppercase tracking-wider">Pending Intl</p>
+            <h4 class="font-headline-md text-headline-md text-on-surface mt-0.5">{{ pending_intl }}</h4>
+        </div>
+    </div>
+</div>
+
+<!-- Procurement Pipeline Workflows List -->
+<div class="bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+    <div class="p-5 border-b border-outline-variant bg-surface-container-low flex justify-between items-center">
+        <h4 class="font-label-bold text-label-bold text-on-surface uppercase tracking-wider">Active Purchase Authorizations</h4>
+    </div>
+    <div class="divide-y divide-outline-variant/60">
+        {% for req in requests %}
+            <div class="p-5 hover:bg-surface-container-high/40 transition-colors flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <!-- Request Title & Track Info -->
+                <div class="flex-1 min-w-[250px]">
+                    <div class="flex items-center gap-2 mb-1.5">
+                        <span class="material-symbols-outlined text-on-surface-variant text-lg">shopping_cart</span>
+                        <h5 class="font-headline-sm text-[15px] font-bold text-on-surface leading-tight">{{ req.title }}</h5>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        {% if req.track == 'Local' %}
+                            <span class="bg-info/10 text-info border border-info/20 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase">Local Track</span>
+                        {% else %}
+                            <span class="bg-warning/10 text-warning border border-warning/20 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase">International Track</span>
+                        {% endif %}
+                        
+                        {% if req.is_terminal %}
+                            <span class="bg-success/15 text-success border border-success/30 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[10px] font-bold">check_circle</span> APPROVED / TERMINAL
+                            </span>
+                        {% else %}
+                            <span class="bg-info/10 text-info border border-info/20 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase flex items-center gap-1 animate-pulse">
+                                <span class="material-symbols-outlined text-[10px]">pending</span> PROCESSING
+                            </span>
+                        {% endif %}
+
+                        {% if req.supporting_document %}
+                            <a href="{{ req.supporting_document.url }}" target="_blank" class="bg-primary-container/15 text-primary-fixed border border-primary-fixed/30 hover:border-primary-fixed px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase flex items-center gap-1 transition-all" title="View Uploaded Document">
+                                <span class="material-symbols-outlined text-[12px]">description</span> VIEW ATTACHMENT
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Signatures Workflow Progress -->
+                <div class="flex flex-wrap items-center gap-3 bg-background/40 p-3 rounded-lg border border-outline-variant/50 max-w-full">
+                    <!-- Step 1: HR -->
+                    <div class="flex items-center gap-1.5">
+                        {% if req.hr_approved %}
+                            <div class="bg-success/20 text-success border border-success/30 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[11px] font-bold">check</span> HR
+                            </div>
+                        {% elif req.next_signer == 'HR' %}
+                            <form method="POST" action="" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="approve">
+                                <input type="hidden" name="procurement_id" value="{{ req.id }}">
+                                <input type="hidden" name="role" value="HR">
+                                <button type="submit" class="bg-warning text-on-warning hover:bg-warning-dark px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 border border-warning/30 hover:scale-95 transition-all cursor-pointer animate-pulse">
+                                    <span class="material-symbols-outlined text-[11px] font-bold">draw</span> SIGN HR
+                                </button>
+                            </form>
+                        {% else %}
+                            <div class="bg-surface-variant text-outline border border-outline-variant px-2 py-1 rounded text-[10px] font-medium flex items-center gap-1 opacity-50">
+                                <span class="material-symbols-outlined text-[11px]">lock</span> HR
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {% if req.track == 'International' %}
+                        <!-- Step 2: CTO (Intl only) -->
+                        <span class="text-outline text-xs">→</span>
+                        <div class="flex items-center gap-1.5">
+                            {% if req.cto_approved %}
+                                <div class="bg-success/20 text-success border border-success/30 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[11px] font-bold">check</span> CTO
+                                </div>
+                            {% elif req.next_signer == 'CTO' %}
+                                <form method="POST" action="" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="approve">
+                                    <input type="hidden" name="procurement_id" value="{{ req.id }}">
+                                    <input type="hidden" name="role" value="CTO">
+                                    <button type="submit" class="bg-warning text-on-warning hover:bg-warning-dark px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 border border-warning/30 hover:scale-95 transition-all cursor-pointer animate-pulse">
+                                        <span class="material-symbols-outlined text-[11px] font-bold">draw</span> SIGN CTO
+                                    </button>
+                                </form>
+                            {% else %}
+                                <div class="bg-surface-variant text-outline border border-outline-variant px-2 py-1 rounded text-[10px] font-medium flex items-center gap-1 opacity-50">
+                                    <span class="material-symbols-outlined text-[11px]">lock</span> CTO
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+
+                    <!-- Step 3: COO -->
+                    <span class="text-outline text-xs">→</span>
+                    <div class="flex items-center gap-1.5">
+                        {% if req.coo_approved %}
+                            <div class="bg-success/20 text-success border border-success/30 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[11px] font-bold">check</span> COO
+                            </div>
+                        {% elif req.next_signer == 'COO' %}
+                            <form method="POST" action="" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="approve">
+                                <input type="hidden" name="procurement_id" value="{{ req.id }}">
+                                <input type="hidden" name="role" value="COO">
+                                <button type="submit" class="bg-warning text-on-warning hover:bg-warning-dark px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 border border-warning/30 hover:scale-95 transition-all cursor-pointer animate-pulse">
+                                    <span class="material-symbols-outlined text-[11px] font-bold">draw</span> SIGN COO
+                                </button>
+                            </form>
+                        {% else %}
+                            <div class="bg-surface-variant text-outline border border-outline-variant px-2 py-1 rounded text-[10px] font-medium flex items-center gap-1 opacity-50">
+                                <span class="material-symbols-outlined text-[11px]">lock</span> COO
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {% if req.track == 'International' %}
+                        <!-- Step 4: CEO (Intl only) -->
+                        <span class="text-outline text-xs">→</span>
+                        <div class="flex items-center gap-1.5">
+                            {% if req.ceo_approved %}
+                                <div class="bg-success/20 text-success border border-success/30 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[11px] font-bold">check</span> CEO
+                                </div>
+                            {% elif req.next_signer == 'CEO' %}
+                                <form method="POST" action="" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="approve">
+                                    <input type="hidden" name="procurement_id" value="{{ req.id }}">
+                                    <input type="hidden" name="role" value="CEO">
+                                    <button type="submit" class="bg-warning text-on-warning hover:bg-warning-dark px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 border border-warning/30 hover:scale-95 transition-all cursor-pointer animate-pulse">
+                                        <span class="material-symbols-outlined text-[11px] font-bold">draw</span> SIGN CEO
+                                    </button>
+                                </form>
+                            {% else %}
+                                <div class="bg-surface-variant text-outline border border-outline-variant px-2 py-1 rounded text-[10px] font-medium flex items-center gap-1 opacity-50">
+                                    <span class="material-symbols-outlined text-[11px]">lock</span> CEO
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Delete Option -->
+                <button type="button" onclick="event.stopPropagation(); confirmDelete('{% url 'procurement_list' %}', 'Delete Procurement Request', 'Are you sure you want to delete this procurement request? This workflow will be permanently erased.', { action: 'delete', procurement_id: '{{ req.id }}' })" class="material-symbols-outlined text-outline hover:text-error text-lg flex items-center justify-center p-2 rounded hover:bg-surface-variant transition-colors cursor-pointer" title="Delete Workflow">
+                    delete
+                </button>
+            </div>
+        {% empty %}
+            <div class="text-center py-16 text-outline font-body-lg">
+                <span class="material-symbols-outlined text-4xl block mb-2 text-outline-variant">shopping_cart</span>
+                No active procurement requests found.
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Create Procurement Request Modal -->
+<div id="procurementModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-container border border-outline-variant w-full max-w-md p-6 rounded-xl shadow-2xl relative">
+        <div class="flex justify-between items-center border-b border-outline-variant pb-4 mb-4">
+            <h3 class="font-headline-sm text-headline-sm text-primary flex items-center gap-2">
+                <span class="material-symbols-outlined">add_shopping_cart</span>
+                NEW PROCUREMENT WORKFLOW
+            </h3>
+            <button onclick="closeProcurementModal()" class="material-symbols-outlined text-outline hover:text-primary transition-colors cursor-pointer">close</button>
+        </div>
+        
+        <form method="POST" action="" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create">
+            
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Item Title / Purchase Name</label>
+                    <input type="text" name="title" placeholder="e.g. Purchase 15x CCTV Cameras (Hikvision)" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded" required>
+                </div>
+                
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Procurement Track</label>
+                    <select name="track" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none cursor-pointer rounded">
+                        <option value="Local">Local (HR → COO)</option>
+                        <option value="International">International (HR → CTO → COO → CEO)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Supporting Document (PDF, Image, etc.)</label>
+                    <input type="file" name="supporting_document" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-4 border-t border-outline-variant">
+                <button type="button" onclick="closeProcurementModal()" class="px-4 py-2 border border-outline-variant hover:bg-surface-variant font-label-bold text-label-bold text-on-surface rounded cursor-pointer transition-colors">CANCEL</button>
+                <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary-dark font-label-bold text-label-bold text-on-primary rounded cursor-pointer transition-colors">START WORKFLOW</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openProcurementModal() {
+        document.getElementById('procurementModal').classList.remove('hidden');
+    }
+    function closeProcurementModal() {
+        document.getElementById('procurementModal').classList.add('hidden');
+    }
+</script>
+{% endblock content %}

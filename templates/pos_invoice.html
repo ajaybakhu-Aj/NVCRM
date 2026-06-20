@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block head %}
+<style>
+    @media print {
+        body { background: white; color: black; }
+        .no-print { display: none !important; }
+        .sidebar, .top-app-bar { display: none !important; }
+        main { padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; }
+        .invoice-box { border: none !important; box-shadow: none !important; margin: 0 !important; }
+        .dark .invoice-box { background: white !important; color: black !important; }
+        * { color: black !important; border-color: #ddd !important; }
+        .text-on-surface-variant { color: #555 !important; }
+        .text-primary-fixed { color: #000 !important; }
+    }
+</style>
+{% endblock head %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto no-print mb-6 flex justify-between items-center">
+    <h3 class="font-headline-sm text-on-surface uppercase tracking-wider">Sale Complete</h3>
+    <div class="flex gap-4">
+        <a href="{% url 'pos' %}" class="bg-surface-container-high text-on-surface px-4 py-2 rounded border border-outline-variant hover:bg-surface-variant font-label-bold">BACK TO POS</a>
+        <button onclick="window.print()" class="bg-primary text-on-primary px-6 py-2 rounded hover:brightness-110 font-label-bold uppercase flex items-center gap-2">
+            <span class="material-symbols-outlined">print</span> Print Invoice
+        </button>
+    </div>
+</div>
+
+{% if invoice %}
+<div class="max-w-4xl mx-auto bg-surface-container-lowest border border-outline-variant rounded-xl p-8 shadow-2xl invoice-box">
+    <!-- Invoice Header -->
+    <div class="flex justify-between items-start border-b border-outline-variant pb-6 mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-primary-fixed uppercase tracking-wider mb-1">NIGHTVISION HQ</h1>
+            <p class="text-sm text-on-surface-variant">Enterprise Security Solutions</p>
+            <p class="text-sm text-on-surface-variant mt-2">123 Corporate Ave, Kathmandu, Nepal</p>
+            <p class="text-sm text-on-surface-variant">PAN: 601122334 | Tel: +977-9851011223</p>
+        </div>
+        <div class="text-right">
+            <h2 class="text-4xl font-black text-on-surface opacity-20 uppercase tracking-widest mb-2">PROFORMA</h2>
+            <p class="text-sm font-label-bold text-on-surface-variant uppercase">Invoice No: <span class="text-on-surface">{{ invoice.invoice_id }}</span></p>
+            <p class="text-sm font-label-bold text-on-surface-variant uppercase mt-1">Date: <span class="text-on-surface">{{ invoice.date }}</span></p>
+            
+            <div class="mt-4 pt-4 border-t border-outline-variant inline-block text-right w-64">
+                <p class="text-[10px] font-label-caps text-on-surface-variant mb-1">BILLED TO</p>
+                <p class="text-sm font-bold text-on-surface uppercase">{{ invoice.customer_name }}</p>
+                {% if invoice.customer_pan %}
+                <p class="text-xs text-on-surface-variant font-data-mono mt-1">PAN/VAT: {{ invoice.customer_pan }}</p>
+                {% endif %}
+                {% if invoice.customer_phone %}
+                <p class="text-xs text-on-surface-variant mt-0.5">{{ invoice.customer_phone }}</p>
+                {% endif %}
+                {% if invoice.customer_address %}
+                <p class="text-xs text-on-surface-variant mt-0.5">{{ invoice.customer_address }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Items Table -->
+    <table class="w-full text-left border-collapse mb-8">
+        <thead>
+            <tr class="bg-surface-container border-y border-outline-variant">
+                <th class="py-3 px-4 font-label-bold text-[11px] uppercase tracking-wider text-on-surface">SKU</th>
+                <th class="py-3 px-4 font-label-bold text-[11px] uppercase tracking-wider text-on-surface">Description</th>
+                <th class="py-3 px-4 font-label-bold text-[11px] uppercase tracking-wider text-on-surface text-center">Qty</th>
+                <th class="py-3 px-4 font-label-bold text-[11px] uppercase tracking-wider text-on-surface text-right">Unit Price</th>
+                <th class="py-3 px-4 font-label-bold text-[11px] uppercase tracking-wider text-on-surface text-right">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in invoice.items %}
+            <tr class="border-b border-outline-variant/50">
+                <td class="py-4 px-4 font-data-mono text-sm text-primary-fixed">{{ item.sku_id }}</td>
+                <td class="py-4 px-4 font-bold text-sm text-on-surface">{{ item.product_name }}</td>
+                <td class="py-4 px-4 text-center font-tabular-numeric text-on-surface">{{ item.quantity }}</td>
+                <td class="py-4 px-4 text-right font-data-mono text-on-surface-variant">Rs. {{ item.price|floatformat:2 }}</td>
+                <td class="py-4 px-4 text-right font-data-mono text-on-surface">Rs. {{ item.total|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Totals -->
+    <div class="flex justify-end border-t-2 border-outline-variant pt-6">
+        <div class="w-64 space-y-3">
+            <div class="flex justify-between text-sm">
+                <span class="text-on-surface-variant font-label-bold uppercase">Subtotal</span>
+                <span class="font-data-mono text-on-surface">Rs. {{ invoice.subtotal|floatformat:2 }}</span>
+            </div>
+            {% if invoice.discount > 0 %}
+            <div class="flex justify-between text-sm">
+                <span class="text-error font-label-bold uppercase">Discount</span>
+                <span class="font-data-mono text-error">-Rs. {{ invoice.discount|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            <div class="flex justify-between text-xl border-t border-outline-variant pt-3 mt-3">
+                <span class="text-on-surface font-bold uppercase tracking-wider">Total</span>
+                <span class="font-data-mono font-bold text-primary-fixed">Rs. {{ invoice.total_amount|floatformat:2 }}</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-16 text-center border-t border-outline-variant pt-6">
+        <p class="text-on-surface-variant text-xs italic">Thank you for doing business with Nightvision HQ.</p>
+        <p class="text-on-surface-variant text-[10px] mt-1">This is a system generated document and does not require a signature.</p>
+    </div>
+</div>
+{% else %}
+<div class="text-center py-20">
+    <p class="text-on-surface-variant">No recent invoice found.</p>
+    <a href="{% url 'pos' %}" class="mt-4 inline-block bg-primary text-on-primary px-6 py-2 rounded">Go to POS</a>
+</div>
+{% endif %}
+{% endblock content %}

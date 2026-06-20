@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block head %}
+<style>
+    .zebra-stripe:nth-child(even) {
+      background-color: #102034;
+    }
+    .zebra-stripe:nth-child(odd) {
+      background-color: #0b1c30;
+    }
+    .repairable-block {
+      background: linear-gradient(135deg, #1b2b3f 0%, #031427 100%);
+      border-left: 4px solid #a4d64c;
+    }
+</style>
+{% endblock head %}
+
+{% block content %}
+<!-- Dashboard Header for Inventory -->
+<div class="flex justify-between items-end mb-8">
+    <div>
+        <h3 class="font-headline-lg text-headline-lg text-on-surface">Inventory & Financial Ledger</h3>
+        <p class="text-on-surface-variant font-body-md mt-1">Real-time tracking of localized inventory units and accounts receivable.</p>
+    </div>
+</div>
+
+<div class="space-y-gutter-grid">
+    <!-- Section: Stock Tracking -->
+    <section class="grid grid-cols-12 gap-gutter-grid">
+        <div class="col-span-12 lg:col-span-8 space-y-4">
+            <div class="flex justify-between items-end">
+                <div>
+                    <h3 class="font-headline-sm text-headline-sm text-primary-fixed uppercase tracking-wider">Stock Tracking</h3>
+                </div>
+                <div class="flex gap-2">
+                    <button class="flex items-center gap-2 bg-surface-container-high text-on-surface px-4 py-2 rounded-lg border border-outline-variant font-label-bold text-label-bold hover:bg-surface-variant">
+                        <span class="material-symbols-outlined text-sm">tune</span>
+                        FILTER
+                    </button>
+                    <button onclick="document.getElementById('add-stock-modal').classList.remove('hidden')" class="bg-primary-container text-on-primary-container px-4 py-2 rounded-lg font-label-bold text-label-bold hover:scale-95 transition-transform">
+                        ADD STOCK
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Messages -->
+            {% if messages %}
+            <div class="mb-4">
+                {% for message in messages %}
+                <div class="p-3 rounded border bg-primary/10 border-primary text-primary font-label-bold flex items-center gap-2 text-sm">
+                    <span class="material-symbols-outlined text-sm">check_circle</span>
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Inventory Table -->
+            <div class="bg-surface-container-low rounded-xl border border-outline-variant overflow-x-auto">
+                <table class="w-full text-left border-collapse whitespace-nowrap">
+                    <thead>
+                        <tr class="bg-surface-container text-on-surface-variant uppercase font-label-bold text-[10px] tracking-[0.1em]">
+                            <th class="px-6 py-3 border-b border-outline-variant">SKU ID</th>
+                            <th class="px-6 py-3 border-b border-outline-variant">Product Name</th>
+                            <th class="px-6 py-3 border-b border-outline-variant">Price</th>
+                            <th class="px-6 py-3 border-b border-outline-variant">Bin Status</th>
+                            <th class="px-6 py-3 border-b border-outline-variant text-right">Quantity</th>
+                            <th class="px-6 py-3 border-b border-outline-variant">Last Audit</th>
+                        </tr>
+                    </thead>
+                    <tbody class="font-tabular-numeric text-body-md text-on-surface">
+                        {% for item in inventory %}
+                        <tr class="zebra-stripe hover:bg-surface-variant transition-colors group">
+                            <td class="px-6 py-4 font-bold text-primary-fixed">{{ item.sku_id }}</td>
+                            <td class="px-6 py-4">{{ item.product_name }}</td>
+                            <td class="px-6 py-4 font-data-mono">Rs. {{ item.price|floatformat:2 }}</td>
+                            <td class="px-6 py-4">
+                                <span class="px-2 py-0.5 rounded-full {% if item.locator_bin_status == 'Fresh' %}bg-primary-container/10 text-primary-fixed border border-primary-fixed{% elif item.locator_bin_status == 'Refurbished' %}bg-secondary-container text-on-secondary-container border border-outline{% elif item.locator_bin_status == 'Repairable' %}bg-surface-tint/20 text-surface-tint border border-surface-tint{% else %}bg-error-container text-on-error-container{% endif %} text-[10px] font-bold uppercase">{{ item.locator_bin_status }}</span>
+                            </td>
+                            <td class="px-6 py-4 text-right {% if item.quantity_on_hand == 0 %}text-error font-bold{% endif %}">{{ item.quantity_on_hand }}</td>
+                            <td class="px-6 py-4 text-on-surface-variant text-sm">{{ item.created_at|date:"d M Y" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="px-6 py-8 text-center text-on-surface-variant">No inventory records found. Add stock to begin.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Add Stock Modal -->
+        <div id="add-stock-modal" class="hidden fixed inset-0 bg-surface/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-surface-container-high border border-outline-variant rounded-xl shadow-2xl w-full max-w-md p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="font-headline-sm text-on-surface uppercase tracking-wider">Add CCTV Stock</h3>
+                    <button onclick="document.getElementById('add-stock-modal').classList.add('hidden')" class="material-symbols-outlined text-on-surface-variant hover:text-error transition-colors">close</button>
+                </div>
+                <form method="POST" action="{% url 'inventory_list' %}" class="space-y-4" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_stock">
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="col-span-2">
+                            <label class="block text-[10px] text-outline font-label-caps mb-1">PRODUCT IMAGE</label>
+                            <input type="file" name="product_image" accept="image/*" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-1.5 rounded focus:outline-none focus:border-primary-fixed file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary-container file:text-primary-fixed hover:file:bg-primary/20 transition-all cursor-pointer">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-[10px] text-outline font-label-caps mb-1">PRODUCT NAME / MODEL</label>
+                            <input type="text" name="product_name" required placeholder="e.g. NV-CCTV Dome 4K" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-outline font-label-caps mb-1">SKU ID</label>
+                            <input type="text" name="sku_id" required placeholder="NV-100-X" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-outline font-label-caps mb-1">UNIT PRICE (Rs.)</label>
+                            <input type="number" step="0.01" name="price" required placeholder="0.00" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-outline font-label-caps mb-1">QUANTITY</label>
+                            <input type="number" name="quantity" required min="1" placeholder="10" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-outline font-label-caps mb-1">BIN STATUS</label>
+                            <select name="locator_bin_status" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed">
+                                <option value="Fresh">Fresh</option>
+                                <option value="Refurbished">Refurbished</option>
+                                <option value="Repairable">Repairable</option>
+                                <option value="Damaged">Damaged</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="w-full mt-6 bg-primary text-on-primary py-3 rounded font-label-bold uppercase tracking-widest hover:brightness-110 transition-all flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined">add_box</span>
+                        Save to Ledger
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Visual Block on 'Repairable' Checkout -->
+        <div class="col-span-12 lg:col-span-4 space-y-4">
+            <div class="repairable-block p-6 rounded-xl flex flex-col h-full justify-between shadow-lg">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="material-symbols-outlined text-primary-fixed text-4xl" style="font-variation-settings: 'FILL' 1;">build_circle</span>
+                        <span class="bg-surface/50 px-3 py-1 rounded text-[10px] font-bold text-on-surface tracking-widest">ACTIVE QUEUE</span>
+                    </div>
+                    <h4 class="font-headline-sm text-headline-sm text-tertiary mb-2">Repairable Checkout</h4>
+                    <p class="text-body-sm text-on-secondary-container mb-6">Units currently staged for technical refurbishment. Authorize transfer to Workshop 7.</p>
+                    
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center text-body-sm">
+                            <span class="text-on-surface-variant">Pending Units:</span>
+                            <span class="font-bold text-primary-fixed">42</span>
+                        </div>
+                        <div class="flex justify-between items-center text-body-sm">
+                            <span class="text-on-surface-variant">Est. Value Recovery:</span>
+                            <span class="font-bold text-primary-fixed">$14,200.00</span>
+                        </div>
+                        <div class="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+                            <div class="bg-primary-fixed h-full w-2/3"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="w-full bg-primary-fixed text-on-primary-fixed py-3 mt-8 font-label-bold text-label-bold rounded-lg hover:brightness-110 active:scale-95 transition-all uppercase">
+                    Release to Maintenance
+                </button>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Section: Accounts Receivable -->
+    <section class="space-y-4">
+        <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-primary-fixed">account_balance_wallet</span>
+            <h3 class="font-headline-sm text-headline-sm text-primary-fixed uppercase tracking-wider">Accounts Receivable</h3>
+        </div>
+        
+        <div class="grid grid-cols-12 gap-gutter-grid">
+            <!-- Financial Data Grid -->
+            <div class="col-span-12 bg-surface-container-low rounded-xl border border-outline-variant overflow-x-auto">
+                <div class="px-6 py-4 bg-surface-container-high border-b border-outline-variant flex flex-wrap justify-between items-center gap-4">
+                    <span class="font-label-bold text-label-bold text-on-surface-variant">LEDGER DATA V.2.04</span>
+                    <div class="flex gap-4 items-center">
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="w-2 h-2 rounded-full bg-primary-fixed"></span>
+                            <span class="text-on-surface">Settled</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="w-2 h-2 rounded-full bg-error"></span>
+                            <span class="text-on-surface">Unpaid</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <table class="w-full text-left border-collapse whitespace-nowrap">
+                    <thead>
+                        <tr class="text-on-surface-variant uppercase font-label-bold text-[10px] tracking-[0.1em]">
+                            <th class="px-6 py-4 border-b border-outline-variant">UUID</th>
+                            <th class="px-6 py-4 border-b border-outline-variant">Invoice ID</th>
+                            <th class="px-6 py-4 border-b border-outline-variant">Client Name</th>
+                            <th class="px-6 py-4 border-b border-outline-variant">Amount</th>
+                            <th class="px-6 py-4 border-b border-outline-variant">Date</th>
+                            <th class="px-6 py-4 border-b border-outline-variant">Reconciliation</th>
+                            <th class="px-6 py-4 border-b border-outline-variant text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="font-tabular-numeric text-body-md text-on-surface">
+                        {% for invoice in accounts %}
+                        <tr class="zebra-stripe hover:bg-surface-variant transition-colors border-b border-outline-variant/30">
+                            <td class="px-6 py-4 text-on-surface-variant">ar-{{ invoice.id|stringformat:"04d" }}</td>
+                            <td class="px-6 py-4 font-bold">{{ invoice.invoice_number }}</td>
+                            <td class="px-6 py-4">{{ invoice.customer_name }}</td>
+                            <td class="px-6 py-4 font-bold">Rs. {{ invoice.amount_due|floatformat:2 }}</td>
+                            <td class="px-6 py-4 text-on-surface-variant">{{ invoice.created_at|date:"d M y" }}</td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-2">
+                                    {% if invoice.state == 'Settled' %}
+                                    <span class="material-symbols-outlined text-primary-fixed text-lg" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                                    <span class="text-primary-fixed font-bold text-xs uppercase">Settled</span>
+                                    {% elif invoice.state == 'Partially_Paid' %}
+                                    <span class="material-symbols-outlined text-secondary text-lg" style="font-variation-settings: 'FILL' 1;">pending</span>
+                                    <span class="text-secondary font-bold text-xs uppercase">Partial</span>
+                                    {% else %}
+                                    <span class="material-symbols-outlined text-error text-lg" style="font-variation-settings: 'FILL' 1;">error</span>
+                                    <span class="text-error font-bold text-xs uppercase">{{ invoice.state }}</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <button class="text-primary-fixed hover:underline font-label-bold text-xs">VIEW</button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="px-6 py-8 text-center text-on-surface-variant italic">No recent transactions found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                
+                <!-- Footer stats for ledger -->
+                <div class="px-6 py-4 bg-surface-container border-t border-outline-variant flex flex-wrap justify-between items-center text-body-sm gap-4">
+                    <div class="flex gap-8">
+                        <p><span class="text-on-surface-variant uppercase text-[10px] mr-2">Total Receivables:</span> <span class="font-bold">Rs. 208,520.50</span></p>
+                        <p><span class="text-on-surface-variant uppercase text-[10px] mr-2">Critical Past Due:</span> <span class="font-bold text-error">Rs. 92,400.00</span></p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="px-3 py-1 bg-surface-container-high rounded text-xs border border-outline hover:bg-surface-variant">PREVIOUS</button>
+                        <button class="px-3 py-1 bg-surface-container-high rounded text-xs border border-outline hover:bg-surface-variant">NEXT</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Atmospheric Visual Element (Bento-style spacer) -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-gutter-grid md:h-48">
+        <div class="bg-surface-container-high rounded-xl border border-outline-variant p-6 flex flex-col justify-center">
+            <p class="text-[10px] font-bold text-primary-fixed tracking-widest mb-1">INVENTORY HEALTH</p>
+            <h4 class="font-headline-md text-headline-md text-tertiary">98.2%</h4>
+            <p class="text-body-sm text-on-surface-variant">Audit accuracy across all nodes.</p>
+        </div>
+        
+        <div class="bg-surface-container-high rounded-xl border border-outline-variant p-6 relative overflow-hidden flex flex-col justify-center">
+            <div class="absolute -right-4 -bottom-4 opacity-10">
+                <span class="material-symbols-outlined text-8xl">trending_up</span>
+            </div>
+            <p class="text-[10px] font-bold text-primary-fixed tracking-widest mb-1">CASH FLOW VELOCITY</p>
+            <h4 class="font-headline-md text-headline-md text-tertiary">+14.5%</h4>
+            <p class="text-body-sm text-on-surface-variant">30-day settlement acceleration.</p>
+        </div>
+        
+        <div class="bg-surface-container-high rounded-xl border border-outline-variant p-6 flex flex-col justify-center relative">
+            <p class="text-[10px] font-bold text-primary-fixed tracking-widest mb-1">WAREHOUSE LOAD</p>
+            <div class="flex items-end gap-2">
+                <h4 class="font-headline-md text-headline-md text-tertiary">84</h4>
+                <span class="text-body-sm text-on-surface-variant mb-1.5">/ 100 BINS</span>
+            </div>
+            <div class="w-full bg-surface-container rounded-full h-1 mt-2">
+                <div class="bg-primary-fixed h-full w-[84%]"></div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+<script>
+    // Micro-interaction for table rows
+    document.querySelectorAll('.zebra-stripe').forEach(row => {
+        row.addEventListener('mousedown', () => {
+            row.style.transform = 'scale(0.995)';
+            row.style.transition = 'transform 0.1s ease';
+        });
+        row.addEventListener('mouseup', () => {
+            row.style.transform = 'scale(1)';
+        });
+    });
+</script>
+{% endblock scripts %}
