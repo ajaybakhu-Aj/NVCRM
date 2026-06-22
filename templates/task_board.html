@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex justify-between items-end mb-6">
+    <div>
+        <h3 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Project Command Center</h3>
+        <p class="text-on-surface-variant font-body-md mt-1">Global Task Allocation & Strategic Kanban Board</p>
+    </div>
+    <div>
+        <button onclick="toggleModal('newTaskModal')" class="flex items-center gap-2 bg-primary text-on-primary hover:brightness-110 transition-colors px-5 py-2.5 rounded-lg font-label-bold text-xs uppercase tracking-widest shadow-[0_0_15px_rgba(220,255,158,0.3)]">
+            <span class="material-symbols-outlined text-[18px]">add_task</span>
+            Assign New Task
+        </button>
+    </div>
+</div>
+
+<!-- Task Progress Metrics -->
+<div class="grid grid-cols-4 gap-4 mb-8">
+    <div class="bg-surface-container-low border border-outline-variant/50 p-4 rounded-xl flex items-center justify-between">
+        <div>
+            <p class="text-[10px] text-on-surface-variant font-label-caps uppercase tracking-widest mb-1">To Do</p>
+            <h4 class="text-2xl font-bold text-on-surface">{{ metrics.todo_pct }}<span class="text-sm font-normal text-outline ml-1">%</span></h4>
+        </div>
+        <div class="w-10 h-10 rounded-full bg-outline/10 flex items-center justify-center">
+            <span class="material-symbols-outlined text-outline">list_alt</span>
+        </div>
+    </div>
+    
+    <div class="bg-surface-container-low border border-outline-variant/50 p-4 rounded-xl flex items-center justify-between">
+        <div>
+            <p class="text-[10px] text-on-surface-variant font-label-caps uppercase tracking-widest mb-1">In Progress</p>
+            <h4 class="text-2xl font-bold text-primary">{{ metrics.in_progress_pct }}<span class="text-sm font-normal text-primary/70 ml-1">%</span></h4>
+        </div>
+        <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+            <span class="material-symbols-outlined text-primary">pending</span>
+        </div>
+    </div>
+    
+    <div class="bg-surface-container-low border border-outline-variant/50 p-4 rounded-xl flex items-center justify-between">
+        <div>
+            <p class="text-[10px] text-on-surface-variant font-label-caps uppercase tracking-widest mb-1">In Review</p>
+            <h4 class="text-2xl font-bold text-amber-400">{{ metrics.review_pct }}<span class="text-sm font-normal text-amber-400/70 ml-1">%</span></h4>
+        </div>
+        <div class="w-10 h-10 rounded-full bg-amber-400/10 flex items-center justify-center">
+            <span class="material-symbols-outlined text-amber-400">find_in_page</span>
+        </div>
+    </div>
+    
+    <div class="bg-surface-container-low border border-outline-variant/50 p-4 rounded-xl flex items-center justify-between">
+        <div>
+            <p class="text-[10px] text-on-surface-variant font-label-caps uppercase tracking-widest mb-1">Completed</p>
+            <h4 class="text-2xl font-bold text-info">{{ metrics.done_pct }}<span class="text-sm font-normal text-info/70 ml-1">%</span></h4>
+        </div>
+        <div class="w-10 h-10 rounded-full bg-info/10 flex items-center justify-center">
+            <span class="material-symbols-outlined text-info">check_circle</span>
+        </div>
+    </div>
+</div>
+
+<div class="flex gap-6 h-[calc(100vh-280px)] overflow-x-auto pb-4 custom-scrollbar">
+    <!-- TODO Column -->
+    <div class="flex-shrink-0 w-[350px] bg-surface-container-low border border-outline-variant/50 rounded-xl flex flex-col h-full overflow-hidden">
+        <div class="p-4 border-b border-outline-variant/30 bg-surface-container/50 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-outline"></span>
+                <h4 class="font-label-bold text-on-surface uppercase tracking-widest text-xs">To Do</h4>
+            </div>
+            <span class="bg-surface-container-highest text-on-surface-variant text-[10px] font-data-mono px-2 py-0.5 rounded">{{ kanban_data.TODO|length }}</span>
+        </div>
+        <div class="p-3 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-3 kanban-column" id="TODO" ondrop="drop(event)" ondragover="allowDrop(event)">
+            {% for task in kanban_data.TODO %}
+                {% include "partials/task_card.html" with task=task %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- IN_PROGRESS Column -->
+    <div class="flex-shrink-0 w-[350px] bg-surface-container-low border border-outline-variant/50 rounded-xl flex flex-col h-full overflow-hidden">
+        <div class="p-4 border-b border-outline-variant/30 bg-surface-container/50 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-primary animate-pulse shadow-[0_0_8px_#dcff9e]"></span>
+                <h4 class="font-label-bold text-primary uppercase tracking-widest text-xs">In Progress</h4>
+            </div>
+            <span class="bg-primary/20 text-primary border border-primary/30 text-[10px] font-data-mono px-2 py-0.5 rounded">{{ kanban_data.IN_PROGRESS|length }}</span>
+        </div>
+        <div class="p-3 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-3 kanban-column" id="IN_PROGRESS" ondrop="drop(event)" ondragover="allowDrop(event)">
+            {% for task in kanban_data.IN_PROGRESS %}
+                {% include "partials/task_card.html" with task=task %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- REVIEW Column -->
+    <div class="flex-shrink-0 w-[350px] bg-surface-container-low border border-outline-variant/50 rounded-xl flex flex-col h-full overflow-hidden">
+        <div class="p-4 border-b border-outline-variant/30 bg-surface-container/50 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                <h4 class="font-label-bold text-amber-400 uppercase tracking-widest text-xs">Review</h4>
+            </div>
+            <span class="bg-amber-400/10 text-amber-400 border border-amber-400/30 text-[10px] font-data-mono px-2 py-0.5 rounded">{{ kanban_data.REVIEW|length }}</span>
+        </div>
+        <div class="p-3 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-3 kanban-column" id="REVIEW" ondrop="drop(event)" ondragover="allowDrop(event)">
+            {% for task in kanban_data.REVIEW %}
+                {% include "partials/task_card.html" with task=task %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- DONE Column -->
+    <div class="flex-shrink-0 w-[350px] bg-surface-container-low border border-outline-variant/50 rounded-xl flex flex-col h-full overflow-hidden opacity-80 transition-opacity hover:opacity-100">
+        <div class="p-4 border-b border-outline-variant/30 bg-surface-container/50 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-info"></span>
+                <h4 class="font-label-bold text-info uppercase tracking-widest text-xs">Done</h4>
+            </div>
+            <span class="bg-info/10 text-info border border-info/30 text-[10px] font-data-mono px-2 py-0.5 rounded">{{ kanban_data.DONE|length }}</span>
+        </div>
+        <div class="p-3 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-3 kanban-column" id="DONE" ondrop="drop(event)" ondragover="allowDrop(event)">
+            {% for task in kanban_data.DONE %}
+                {% include "partials/task_card.html" with task=task %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Add Task Modal -->
+<div id="newTaskModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+    <div class="bg-surface-container border border-outline-variant p-6 rounded-xl w-full max-w-lg shadow-2xl relative">
+        <div class="flex justify-between items-center mb-6 border-b border-outline-variant/50 pb-4">
+            <h3 class="font-headline-sm text-headline-sm text-primary-fixed uppercase tracking-wider">Deploy New Task</h3>
+            <button onclick="toggleModal('newTaskModal')" class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">close</button>
+        </div>
+        <form method="POST" action="{% url 'task_board' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create_task">
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps mb-1 tracking-widest">TASK DIRECTIVE (TITLE)</label>
+                    <input type="text" name="title" required class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2.5 rounded focus:outline-none focus:border-primary-fixed focus:ring-1 focus:ring-primary-fixed transition-all" placeholder="E.g., Configure Secure Server Node">
+                </div>
+                
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps mb-1 tracking-widest">MISSION BRIEF (DESCRIPTION)</label>
+                    <textarea name="description" rows="3" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2.5 rounded focus:outline-none focus:border-primary-fixed focus:ring-1 focus:ring-primary-fixed transition-all resize-none custom-scrollbar" placeholder="Detailed objectives..."></textarea>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] text-outline font-label-caps mb-1 tracking-widest">THREAT LEVEL (PRIORITY)</label>
+                        <select name="priority" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2.5 rounded focus:outline-none focus:border-primary-fixed cursor-pointer">
+                            <option value="LOW">Low</option>
+                            <option value="MEDIUM" selected>Medium</option>
+                            <option value="HIGH">High</option>
+                            <option value="URGENT">Urgent (Critical)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-outline font-label-caps mb-1 tracking-widest">DEADLINE</label>
+                        <input type="date" name="due_date" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2.5 rounded focus:outline-none focus:border-primary-fixed cursor-pointer">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps mb-1 tracking-widest">ASSIGN TO ASSET</label>
+                    <select name="assigned_to" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2.5 rounded focus:outline-none focus:border-primary-fixed cursor-pointer">
+                        <option value="">-- Select Team Member --</option>
+                        {% for u in users %}
+                            <option value="{{ u.id }}">{{ u.full_name }} ({{ u.position }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-3 mt-8 pt-4 border-t border-outline-variant/50">
+                <button type="button" onclick="toggleModal('newTaskModal')" class="px-5 py-2.5 border border-outline-variant text-on-surface-variant hover:bg-surface-variant rounded-lg transition-all text-xs font-label-caps uppercase tracking-wider">Cancel</button>
+                <button type="submit" class="px-5 py-2.5 bg-primary text-on-primary hover:brightness-110 rounded-lg transition-all text-xs font-label-caps uppercase tracking-wider flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[16px]">send</span> Assign Task
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: rgba(3, 20, 39, 0.5); border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #26364a; border-radius: 4px; }
+    
+    .kanban-column {
+        min-height: 100px;
+    }
+    
+    .dragging {
+        opacity: 0.5;
+        transform: scale(0.98);
+    }
+</style>
+
+<script>
+    function toggleModal(modalId) {
+        document.getElementById(modalId).classList.toggle('hidden');
+    }
+
+    // HTML5 Drag and Drop logic
+    function drag(ev) {
+        ev.dataTransfer.setData("text/plain", ev.target.id);
+        ev.target.classList.add('dragging');
+    }
+
+    function allowDrop(ev) {
+        ev.preventDefault();
+        // Highlight column on hover
+        const col = ev.target.closest('.kanban-column');
+        if (col) {
+            col.style.backgroundColor = 'rgba(220, 255, 158, 0.02)';
+        }
+    }
+
+    function drop(ev) {
+        ev.preventDefault();
+        const data = ev.dataTransfer.getData("text/plain");
+        const draggableElement = document.getElementById(data);
+        const dropzone = ev.target.closest('.kanban-column');
+        
+        // Reset highlights
+        document.querySelectorAll('.kanban-column').forEach(c => c.style.backgroundColor = '');
+
+        if (dropzone && draggableElement) {
+            const newStatus = dropzone.id;
+            const taskId = data.split('_')[1];
+            
+            draggableElement.classList.remove('dragging');
+            dropzone.appendChild(draggableElement);
+
+            // AJAX request to update status
+            const formData = new FormData();
+            formData.append('action', 'update_status');
+            formData.append('task_id', taskId);
+            formData.append('new_status', newStatus);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+            fetch("{% url 'task_board' %}", {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      // Optionally trigger a subtle success animation on the card
+                  }
+              }).catch(err => console.error('Error updating task status:', err));
+        }
+    }
+    
+    document.addEventListener('dragend', function(ev) {
+        if(ev.target && ev.target.classList) {
+            ev.target.classList.remove('dragging');
+        }
+        document.querySelectorAll('.kanban-column').forEach(c => c.style.backgroundColor = '');
+    });
+</script>
+{% endblock %}

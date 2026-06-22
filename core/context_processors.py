@@ -1,9 +1,9 @@
-from core.models import LeaveRequest, ProcurementRequest, SystemUserProfile
+from core.models import LeaveRequest, ProcurementRequest, SystemUserProfile, SystemNotification
 
 def pending_approvals(request):
     uid = request.session.get('logged_in_uid')
     if not uid:
-        return {'pending_approvals_count': 0, 'pending_leaves_count': 0, 'pending_procurements_count': 0, 'system_user': None}
+        return {'pending_approvals_count': 0, 'pending_leaves_count': 0, 'pending_procurements_count': 0, 'system_user': None, 'unread_notifications': []}
     
     system_user = SystemUserProfile.objects.filter(uid=uid).first()
     active_role = request.session.get('active_role', '')
@@ -29,10 +29,17 @@ def pending_approvals(request):
         
     procurement_count = pending_procurements.count()
     total_count = pending_leaves + procurement_count
+    
+    # Fetch notifications for this user
+    unread_notifications = []
+    if system_user:
+        unread_notifications = SystemNotification.objects.filter(recipient=system_user, is_read=False).order_by('-created_at')
 
     return {
         'pending_approvals_count': total_count,
         'pending_leaves_count': pending_leaves,
         'pending_procurements_count': procurement_count,
-        'system_user': system_user
+        'system_user': system_user,
+        'unread_notifications': unread_notifications,
+        'unread_notifications_count': len(unread_notifications) if system_user else 0
     }

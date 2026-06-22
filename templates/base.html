@@ -196,6 +196,14 @@
 <span class="material-symbols-outlined">shopping_cart</span> Procurement
 </a>
 {% endif %}
+{% if request.session.active_role in 'CEO,COO,HR,OPERATION HEAD,HR AND OPERATION HEAD,CITO' %}
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant font-body-md text-body-md hover:bg-surface-variant transition-colors" href="{% url 'attendance_payroll_report' %}">
+<span class="material-symbols-outlined">request_quote</span> Payroll Report
+</a>
+{% endif %}
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant font-body-md text-body-md hover:bg-surface-variant transition-colors" href="{% url 'task_board' %}">
+<span class="material-symbols-outlined">view_kanban</span> Task Board
+</a>
 </nav>
 <div class="p-4 border-t border-outline-variant bg-surface-container-low">
     <div class="flex items-center justify-between">
@@ -246,16 +254,31 @@
 <!-- Notifications Wrapper -->
 <div class="relative">
 <button class="material-symbols-outlined text-on-surface-variant hover:text-primary-fixed transition-colors" onclick="document.getElementById('notifications-menu').classList.toggle('hidden')">notifications</button>
-{% if pending_approvals_count > 0 %}
-<span class="absolute top-0 right-0 w-2 h-2 bg-error rounded-full border border-surface pointer-events-none"></span>
+{% with note_count=unread_notifications|length|add:pending_approvals_count %}
+{% if note_count > 0 %}
+<span class="absolute -top-1.5 -right-1.5 flex h-[15px] min-w-[15px] px-[3px] items-center justify-center rounded-full bg-error text-[8px] font-bold text-on-error pointer-events-none">{{ note_count }}</span>
 {% endif %}
 <!-- Hidden Notifications Dropdown -->
 <div id="notifications-menu" class="hidden absolute top-full right-0 mt-4 w-72 bg-surface-container-high border border-outline-variant rounded-lg shadow-2xl z-50">
     <div class="p-3 border-b border-outline-variant flex justify-between items-center bg-surface-container">
         <h4 class="font-label-bold text-on-surface uppercase tracking-wider text-xs">Notifications</h4>
-        {% if pending_approvals_count > 0 %}<span class="text-[9px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">{{ pending_approvals_count }} New</span>{% endif %}
+        {% if note_count > 0 %}
+            <span class="text-[9px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">{{ note_count }} New</span>
+        {% endif %}
     </div>
-    <div class="max-h-64 overflow-y-auto">
+{% endwith %}
+    <div class="max-h-64 overflow-y-auto custom-scrollbar">
+        {% for note in unread_notifications %}
+        <a href="{{ note.link|default:'#' }}" class="block p-4 border-b border-outline-variant hover:bg-surface-variant transition-colors">
+            <div class="flex items-center gap-2 mb-1">
+                <span class="material-symbols-outlined text-info text-[14px]">info</span>
+                <p class="text-xs text-on-surface font-semibold">Task Update</p>
+            </div>
+            <p class="text-[10px] text-on-surface-variant">{{ note.message }}</p>
+            <p class="text-[8px] text-outline mt-1">{{ note.created_at|timesince }} ago</p>
+        </a>
+        {% endfor %}
+        
         {% if pending_procurements_count > 0 %}
         <a href="{% url 'procurement_list' %}" class="block p-4 border-b border-outline-variant hover:bg-surface-variant transition-colors">
             <div class="flex items-center gap-2 mb-1">
@@ -274,7 +297,7 @@
             <p class="text-[10px] text-on-surface-variant">{{ pending_leaves_count }} Leave requests awaiting your review.</p>
         </a>
         {% endif %}
-        {% if pending_approvals_count == 0 %}
+        {% if pending_approvals_count == 0 and unread_notifications_count == 0 %}
         <div class="p-4 text-center">
              <p class="text-[10px] text-on-surface-variant italic">No new notifications.</p>
         </div>
@@ -441,6 +464,55 @@ function closeDeleteModal() {
         modal.classList.add('hidden');
     }, 300);
 }
+
+// Push Notifications Logic
+document.addEventListener('DOMContentLoaded', () => {
+    if ("Notification" in window) {
+        if (Notification.permission === "default") {
+            Notification.requestPermission();
+        }
+    }
+
+    const currentNoteIDs = [
+        {% for note in unread_notifications %}
+            "{{ note.id }}",
+        {% endfor %}
+    ];
+    const pendingApprovalsCount = {{ pending_approvals_count|default:"0" }};
+    
+    const storedNoteIDs = JSON.parse(localStorage.getItem('notified_ids') || '[]');
+    const storedPendingCount = parseInt(localStorage.getItem('pending_count') || '0');
+
+    let shouldNotify = false;
+    let notificationBody = "";
+
+    const newNoteIDs = currentNoteIDs.filter(id => !storedNoteIDs.includes(id));
+    if (newNoteIDs.length > 0) {
+        shouldNotify = true;
+        notificationBody = `You have ${newNoteIDs.length} new system notification(s).`;
+    }
+
+    if (pendingApprovalsCount > storedPendingCount) {
+        shouldNotify = true;
+        const diff = pendingApprovalsCount - storedPendingCount;
+        notificationBody += `\nYou have ${diff} new approval request(s) waiting.`;
+    }
+
+    if (shouldNotify && "Notification" in window && Notification.permission === "granted") {
+        const notif = new Notification("Nightvision ERP Alert", {
+            body: notificationBody.trim()
+        });
+
+        notif.onclick = function(event) {
+            event.preventDefault();
+            window.focus();
+            document.getElementById('notifications-menu').classList.remove('hidden');
+        };
+    }
+
+    localStorage.setItem('notified_ids', JSON.stringify(currentNoteIDs));
+    localStorage.setItem('pending_count', pendingApprovalsCount.toString());
+});
 </script>
 
 {% block scripts %}{% endblock scripts %}

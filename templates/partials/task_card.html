@@ -1,0 +1,59 @@
+<div id="task_{{ task.id }}" draggable="true" ondragstart="drag(event)" class="bg-surface-container-highest border border-outline-variant/50 p-3 rounded-lg shadow-sm cursor-grab active:cursor-grabbing hover:border-primary/50 transition-colors group relative overflow-hidden">
+    
+    <!-- Priority Bar indicator -->
+    <div class="absolute top-0 left-0 bottom-0 w-1 
+        {% if task.priority == 'URGENT' %}bg-error
+        {% elif task.priority == 'HIGH' %}bg-warning
+        {% elif task.priority == 'LOW' %}bg-info
+        {% else %}bg-primary/50{% endif %}
+    "></div>
+
+    <div class="pl-2">
+        <div class="flex justify-between items-start mb-2">
+            <span class="text-[9px] font-label-caps uppercase tracking-widest text-outline border border-outline-variant/50 rounded px-1 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[10px]">tag</span>
+                TSK-{{ task.id|stringformat:"04d" }}
+            </span>
+            
+            {% if task.priority == 'URGENT' %}
+                <span class="material-symbols-outlined text-error text-[14px] animate-pulse">crisis_alert</span>
+            {% elif task.priority == 'HIGH' %}
+                <span class="material-symbols-outlined text-warning text-[14px]">priority_high</span>
+            {% endif %}
+        </div>
+        
+        <h5 class="text-sm font-semibold text-on-surface mb-1 leading-snug group-hover:text-primary transition-colors">{{ task.title }}</h5>
+        
+        {% if task.description %}
+            <p class="text-xs text-on-surface-variant line-clamp-2 mb-3">{{ task.description }}</p>
+        {% else %}
+            <div class="mb-3"></div>
+        {% endif %}
+        
+        <div class="flex items-center justify-between mt-auto pt-2 border-t border-outline-variant/30">
+            <div class="flex items-center gap-2">
+                {% if task.assigned_to %}
+                    <div class="w-6 h-6 rounded-full bg-surface-variant flex items-center justify-center border border-outline-variant text-[10px] font-bold text-on-surface-variant" title="{{ task.assigned_to.full_name }} ({{ task.assigned_to.position }})">
+                        {{ task.assigned_to.full_name|make_list|first|upper }}
+                    </div>
+                {% else %}
+                    <div class="w-6 h-6 rounded-full bg-surface-container flex items-center justify-center border border-dashed border-outline-variant text-[10px] text-outline" title="Unassigned">
+                        <span class="material-symbols-outlined text-[12px]">person_off</span>
+                    </div>
+                {% endif %}
+                
+                {% if task.due_date %}
+                    <span class="text-[9px] font-data-mono flex items-center gap-1 {% if task.due_date|date:'Y-m-d' < today and task.status != 'DONE' %}text-error font-bold{% else %}text-outline{% endif %}">
+                        <span class="material-symbols-outlined text-[10px]">calendar_today</span>
+                        {{ task.due_date|date:"M d" }}
+                    </span>
+                {% endif %}
+            </div>
+            
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <!-- Additional card actions can go here in the future -->
+                <span class="material-symbols-outlined text-[14px] text-outline hover:text-primary cursor-pointer">open_in_new</span>
+            </div>
+        </div>
+    </div>
+</div>

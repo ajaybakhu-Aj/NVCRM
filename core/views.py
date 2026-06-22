@@ -83,9 +83,27 @@ class DashboardView(TemplateView):
         attended_names = AttendanceRecord.objects.filter(date=today).values_list('employee_name', flat=True)
         on_leave_names = on_leave_today.values_list('employee_name', flat=True)
         
-        missing_attendance_users = SystemUserProfile.objects.exclude(
-            full_name__in=list(attended_names) + list(on_leave_names)
-        )
+        all_users = SystemUserProfile.objects.exclude(full_name__in=list(on_leave_names))
+        attendance_status = []
+        for user in all_users:
+            has_checked_in = user.full_name in list(attended_names)
+            attendance_status.append({
+                'user': user,
+                'has_checked_in': has_checked_in
+            })
+
+        active_role = request.session.get('active_role', '')
+        is_remote_allowed = active_role.upper() in ['SALES', 'IT', 'IT TEAM']
+
+        logged_in_name = request.session.get('logged_in_name', 'John Doe')
+        today_record = AttendanceRecord.objects.filter(employee_name=logged_in_name, date=today).first()
+        is_checked_in = False
+        is_checked_out = False
+        if today_record:
+            if today_record.check_in_time:
+                is_checked_in = True
+            if today_record.check_out_time:
+                is_checked_out = True
 
         context = {
             'weeks': formatted_weeks,
@@ -97,7 +115,10 @@ class DashboardView(TemplateView):
             'next_year': next_year,
             'next_month': next_month,
             'on_leave_today': on_leave_today,
-            'missing_attendance_users': missing_attendance_users,
+            'attendance_status': attendance_status,
+            'is_remote_allowed': is_remote_allowed,
+            'is_checked_in': is_checked_in,
+            'is_checked_out': is_checked_out,
         }
         return render(request, self.template_name, context)
 
@@ -135,6 +156,55 @@ class DashboardView(TemplateView):
             except ValueError:
                 pass
 
+        if action == 'check_in_out':
+            from .models import AttendanceRecord
+            from datetime import date, datetime, time
+            logged_in_name = request.session.get('logged_in_name', 'John Doe')
+            lat_str = request.POST.get('latitude')
+            lng_str = request.POST.get('longitude')
+            today = date.today()
+            now = datetime.now()
+            current_time = now.time()
+
+            lat = None
+            lng = None
+            if lat_str and lng_str:
+                try:
+                    lat = float(lat_str)
+                    lng = float(lng_str)
+                except ValueError:
+                    pass
+
+            cutoff_time = time(9, 30, 0)
+            status = 'Present'
+            if current_time > cutoff_time:
+                status = 'Late'
+
+            record, created = AttendanceRecord.objects.get_or_create(
+                employee_name=logged_in_name,
+                date=today,
+                defaults={
+                    'check_in_time': current_time,
+                    'status': status,
+                    'latitude': lat,
+                    'longitude': lng
+                }
+            )
+
+            if not created:
+                record.check_out_time = current_time
+                record.save()
+
+            from django.http import JsonResponse
+            return JsonResponse({
+                'success': True,
+                'checked_in': record.check_in_time is not None,
+                'checked_out': record.check_out_time is not None,
+                'check_in_time': record.check_in_time.strftime('%I:%M %p') if record.check_in_time else '',
+                'check_out_time': record.check_out_time.strftime('%I:%M %p') if record.check_out_time else '',
+                'status': record.status
+            })
+
         year = request.POST.get('year', '')
         month = request.POST.get('month', '')
         url = '/'
@@ -150,12 +220,13 @@ class AttendanceCheckinView(TemplateView):
     template_name = "attendance_checkin.html"
 
     def get(self, request, *args, **kwargs):
-        # Pre-populate simulated attendance history for John Doe for the current month if empty
+        # Pre-populate simulated attendance history for the user for the current month if empty
+        logged_in_name = request.session.get('logged_in_name', 'John Doe')
         today = date.today()
         year = int(request.GET.get('year', today.year))
         month = int(request.GET.get('month', today.month))
 
-        if not AttendanceRecord.objects.filter(employee_name="John Doe").exists():
+        if not AttendanceRecord.objects.filter(employee_name=logged_in_name).exists():
             # Populate some days in June 2026 (or current month)
             for d in range(1, 19):
                 day_date = date(2026, 6, d)
@@ -164,7 +235,7 @@ class AttendanceCheckinView(TemplateView):
                     # Randomize a bit: Present or Late
                     if d == 12:
                         AttendanceRecord.objects.create(
-                            employee_name="John Doe",
+                            employee_name=logged_in_name,
                             date=day_date,
                             check_in_time=time(9, 45, 0),
                             check_out_time=time(17, 30, 0),
@@ -174,13 +245,13 @@ class AttendanceCheckinView(TemplateView):
                         )
                     elif d == 15:
                         AttendanceRecord.objects.create(
-                            employee_name="John Doe",
+                            employee_name=logged_in_name,
                             date=day_date,
                             status="Leave"
                         )
                     else:
                         AttendanceRecord.objects.create(
-                            employee_name="John Doe",
+                            employee_name=logged_in_name,
                             date=day_date,
                             check_in_time=time(8, 55, 0),
                             check_out_time=time(17, 0, 0),
@@ -195,7 +266,7 @@ class AttendanceCheckinView(TemplateView):
 
         # Fetch records for selected month
         records = AttendanceRecord.objects.filter(
-            employee_name="John Doe",
+            employee_name=logged_in_name,
             date__year=year,
             date__month=month
         )
@@ -258,6 +329,19 @@ class AttendanceCheckinView(TemplateView):
             next_month = 1
             next_year -= 1
 
+        active_role = request.session.get('active_role', '')
+        is_remote_allowed = active_role.upper() in ['SALES', 'IT', 'IT TEAM']
+
+        # Determine check-in/out status for today
+        today_record = AttendanceRecord.objects.filter(employee_name=logged_in_name, date=today).first()
+        is_checked_in = False
+        is_checked_out = False
+        if today_record:
+            if today_record.check_in_time:
+                is_checked_in = True
+            if today_record.check_out_time:
+                is_checked_out = True
+
         context = {
             'weeks': formatted_weeks,
             'year': year,
@@ -272,10 +356,14 @@ class AttendanceCheckinView(TemplateView):
             'total_leave': total_leave,
             'total_absent': total_absent,
             'today': today,
+            'is_remote_allowed': is_remote_allowed,
+            'is_checked_in': is_checked_in,
+            'is_checked_out': is_checked_out,
         }
         return render(request, self.template_name, context)
 
     def post(self, request, *args, **kwargs):
+        logged_in_name = request.session.get('logged_in_name', 'John Doe')
         lat_str = request.POST.get('latitude')
         lng_str = request.POST.get('longitude')
         today = date.today()
@@ -297,7 +385,7 @@ class AttendanceCheckinView(TemplateView):
             status = 'Late'
 
         record, created = AttendanceRecord.objects.get_or_create(
-            employee_name="John Doe",
+            employee_name=logged_in_name,
             date=today,
             defaults={
                 'check_in_time': current_time,
@@ -1321,3 +1409,200 @@ class POSInvoiceView(TemplateView):
         context = super().get_context_data(**kwargs)
         context['invoice'] = self.request.session.get('last_invoice', None)
         return context
+
+class StaffPayrollReportView(TemplateView):
+    template_name = "attendance_payroll_report.html"
+
+    def get(self, request, *args, **kwargs):
+        from django.core.exceptions import PermissionDenied
+        from .models import EmployeeProfile, AttendanceRecord, SystemUserProfile
+        
+        active_role = request.session.get('active_role', '').upper()
+        allowed_roles = ['CEO', 'COO', 'HR', 'OPERATION HEAD', 'HR AND OPERATION HEAD', 'CITO', 'ADMIN']
+        
+        if active_role not in allowed_roles:
+            messages.error(request, "Access Denied: You do not have permission to view the Payroll Report.")
+            return redirect('dashboard')
+            
+        # 1. Fetch Attendance Records for Display
+        attendance_records = AttendanceRecord.objects.all().order_by('-date', '-created_at')
+        
+        # 2. Fetch all Staff/System Users
+        users = SystemUserProfile.objects.all()
+        
+        # 3. Calculate Payroll per User
+        payroll_data = []
+        for u in users:
+            # Let's try to find an EmployeeProfile for their gross salary, otherwise default to 50000
+            emp = EmployeeProfile.objects.filter(first_name__icontains=u.full_name.split(' ')[0]).first()
+            base_salary = float(emp.base_gross_salary) if emp else 50000.0
+            
+            # Assuming standard 160 hours per month
+            hourly_rate = base_salary / 160.0
+            
+            # Sum up hours worked
+            emp_records = AttendanceRecord.objects.filter(employee_name=u.full_name, status__in=['Present', 'Late'])
+            total_hours = 0.0
+            
+            for record in emp_records:
+                # If they checked in but haven't checked out, we can't reliably calculate. We'll skip or assume 8 hrs.
+                if record.check_in_time and record.check_out_time:
+                    check_in = datetime.combine(date.today(), record.check_in_time)
+                    check_out = datetime.combine(date.today(), record.check_out_time)
+                    hours = (check_out - check_in).total_seconds() / 3600.0
+                    if hours < 0:
+                        hours += 24 # overnight shift handle
+                    total_hours += hours
+                else:
+                    # If just present but missing times, assume 8 hours
+                    total_hours += 8.0
+                    
+            total_pay = total_hours * hourly_rate
+            
+            payroll_data.append({
+                'employee_name': u.full_name,
+                'position': u.position,
+                'total_hours': round(total_hours, 2),
+                'hourly_rate': round(hourly_rate, 2),
+                'total_pay': round(total_pay, 2),
+                'base_salary': round(base_salary, 2),
+            })
+            
+        # Additional default stats for John Doe if the users table doesn't match him
+        if not any(pd['employee_name'] == 'John Doe' for pd in payroll_data):
+            john_records = AttendanceRecord.objects.filter(employee_name='John Doe', status='Present')
+            if john_records.exists():
+                john_hours = 0.0
+                for record in john_records:
+                    if record.check_in_time and record.check_out_time:
+                        check_in = datetime.combine(date.today(), record.check_in_time)
+                        check_out = datetime.combine(date.today(), record.check_out_time)
+                        hours = (check_out - check_in).total_seconds() / 3600.0
+                        if hours < 0:
+                            hours += 24
+                        john_hours += hours
+                    else:
+                        john_hours += 8.0
+                hourly_rate = 50000.0 / 160.0
+                payroll_data.append({
+                    'employee_name': 'John Doe',
+                    'position': 'Staff',
+                    'total_hours': round(john_hours, 2),
+                    'hourly_rate': round(hourly_rate, 2),
+                    'total_pay': round(john_hours * hourly_rate, 2),
+                    'base_salary': 50000.0,
+                })
+
+        context = {
+            'attendance_records': attendance_records,
+            'payroll_data': payroll_data
+        }
+        return render(request, self.template_name, context)
+
+class ProjectTaskBoardView(TemplateView):
+    template_name = "task_board.html"
+
+    def get(self, request, *args, **kwargs):
+        from .models import ProjectTask, SystemUserProfile
+        
+        # Get all tasks
+        tasks = ProjectTask.objects.all().order_by('-created_at')
+        total_tasks = tasks.count()
+        
+        # Group tasks by status
+        kanban_data = {
+            'TODO': tasks.filter(status='TODO'),
+            'IN_PROGRESS': tasks.filter(status='IN_PROGRESS'),
+            'REVIEW': tasks.filter(status='REVIEW'),
+            'DONE': tasks.filter(status='DONE'),
+        }
+        
+        metrics = {
+            'todo_pct': 0,
+            'in_progress_pct': 0,
+            'review_pct': 0,
+            'done_pct': 0,
+            'total': total_tasks
+        }
+        
+        if total_tasks > 0:
+            metrics['todo_pct'] = round((kanban_data['TODO'].count() / total_tasks) * 100)
+            metrics['in_progress_pct'] = round((kanban_data['IN_PROGRESS'].count() / total_tasks) * 100)
+            metrics['review_pct'] = round((kanban_data['REVIEW'].count() / total_tasks) * 100)
+            metrics['done_pct'] = round((kanban_data['DONE'].count() / total_tasks) * 100)
+        
+        # Get all users for the assignment dropdown
+        users = SystemUserProfile.objects.all()
+        
+        context = {
+            'kanban_data': kanban_data,
+            'metrics': metrics,
+            'users': users,
+            'today': date.today().strftime('%Y-%m-%d')
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request, *args, **kwargs):
+        from .models import ProjectTask, SystemUserProfile, SystemNotification
+        
+        action = request.POST.get('action')
+        logged_in_name = request.session.get('logged_in_name')
+        
+        if action == 'create_task':
+            title = request.POST.get('title')
+            description = request.POST.get('description', '')
+            priority = request.POST.get('priority', 'MEDIUM')
+            assigned_to_id = request.POST.get('assigned_to')
+            due_date = request.POST.get('due_date')
+            
+            assigned_to = None
+            if assigned_to_id:
+                assigned_to = SystemUserProfile.objects.filter(id=assigned_to_id).first()
+                
+            assigned_by = None
+            if logged_in_name:
+                assigned_by = SystemUserProfile.objects.filter(full_name=logged_in_name).first()
+                
+            task = ProjectTask.objects.create(
+                title=title,
+                description=description,
+                priority=priority,
+                assigned_to=assigned_to,
+                assigned_by=assigned_by,
+                due_date=due_date if due_date else None
+            )
+            
+            # Send Notification to Assignee
+            if assigned_to and assigned_by and assigned_to.id != assigned_by.id:
+                SystemNotification.objects.create(
+                    recipient=assigned_to,
+                    message=f"{assigned_by.full_name} assigned you a new task: '{title}'",
+                    link="/task-board/"
+                )
+                
+            messages.success(request, 'Task created successfully.')
+            
+        elif action == 'update_status':
+            task_id = request.POST.get('task_id')
+            new_status = request.POST.get('new_status')
+            
+            if task_id and new_status:
+                task = ProjectTask.objects.filter(id=task_id).first()
+                if task:
+                    task.status = new_status
+                    task.save()
+                    
+                    # Send Notification to Creator
+                    if task.assigned_by and task.assigned_by.full_name != logged_in_name:
+                        # Get friendly status name
+                        status_display = dict(ProjectTask.STATUS_CHOICES).get(new_status, new_status)
+                        SystemNotification.objects.create(
+                            recipient=task.assigned_by,
+                            message=f"{logged_in_name} moved '{task.title}' to {status_display}",
+                            link="/task-board/"
+                        )
+                        
+                    from django.http import JsonResponse
+                    return JsonResponse({'success': True})
+                    
+        return redirect('task_board')

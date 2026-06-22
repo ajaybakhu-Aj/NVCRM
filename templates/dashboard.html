@@ -35,12 +35,24 @@
 </div>
 </div>
 <div class="mt-8">
-<button class="w-full bg-primary-container text-on-primary-container font-headline-sm py-4 rounded flex items-center justify-center gap-3 active:scale-95 transition-transform hover:brightness-110" id="checkActionBtn" onclick="toggleCheck()">
-<span class="material-symbols-outlined" id="btnIcon">login</span>
-<span id="btnText">Check In</span>
-</button>
+{% if is_checked_out %}
+    <button disabled class="w-full bg-surface-container text-on-surface-variant/40 font-headline-sm py-4 rounded flex items-center justify-center gap-3 cursor-not-allowed opacity-50" id="checkActionBtn">
+        <span class="material-symbols-outlined" id="btnIcon">logout</span>
+        <span id="btnText">Checked Out</span>
+    </button>
+{% elif is_checked_in %}
+    <button class="w-full bg-error text-on-error font-headline-sm py-4 rounded flex items-center justify-center gap-3 active:scale-95 transition-transform hover:brightness-110" id="checkActionBtn" onclick="toggleModal('checkoutModal')">
+        <span class="material-symbols-outlined" id="btnIcon">logout</span>
+        <span id="btnText">Initiate Check-Out</span>
+    </button>
+{% else %}
+    <button class="w-full bg-primary-container text-on-primary-container font-headline-sm py-4 rounded flex items-center justify-center gap-3 active:scale-95 transition-transform hover:brightness-110" id="checkActionBtn" onclick="processCheckInOut()">
+        <span class="material-symbols-outlined" id="btnIcon">login</span>
+        <span id="btnText">Initiate Check-In</span>
+    </button>
+{% endif %}
 <div class="flex justify-between items-center mt-4 px-1">
-<p class="text-xs text-on-surface-variant">Last activity: <span class="font-tabular-numeric" id="last-activity">09:12 PM Yesterday</span></p>
+<p class="text-xs text-on-surface-variant">Status Update</p>
 </div>
 </div>
 </div>
@@ -78,32 +90,36 @@
 </div>
 </div>
 
-<!-- Widget C: Missing Attendance -->
+<!-- Widget C: Checked-ins -->
 <div class="col-span-12 md:col-span-6 bg-surface-container-low border border-outline-variant p-6 min-h-[250px] relative overflow-hidden group">
     <div class="flex items-center gap-2 mb-4 pb-3 border-b border-outline-variant">
-        <span class="material-symbols-outlined text-warning">person_off</span>
-        <h4 class="font-label-bold text-label-bold text-on-surface uppercase tracking-widest">Pending Check-Ins</h4>
+        <span class="material-symbols-outlined text-primary-fixed">person_check</span>
+        <h4 class="font-label-bold text-label-bold text-on-surface uppercase tracking-widest">Checked-ins</h4>
     </div>
     <div class="max-h-48 overflow-y-auto space-y-2 pr-2">
-        {% for user in missing_attendance_users %}
-        <div class="flex items-center justify-between bg-surface-container-highest p-2 rounded border border-outline-variant/50 hover:border-warning/30 transition-colors">
+        {% for status in attendance_status %}
+        <div class="flex items-center justify-between bg-surface-container-highest p-2 rounded border border-outline-variant/50 hover:border-primary/30 transition-colors">
             <div class="flex items-center gap-3">
-                {% if user.profile_image %}
-                <img src="{{ user.profile_image }}" class="w-8 h-8 rounded-full object-cover">
+                {% if status.user.profile_image %}
+                <img src="{{ status.user.profile_image }}" class="w-8 h-8 rounded-full object-cover">
                 {% else %}
-                <span class="w-8 h-8 rounded-full bg-warning/20 text-warning flex items-center justify-center font-bold text-xs">{{ user.full_name|make_list|first|upper }}</span>
+                <span class="w-8 h-8 rounded-full {% if status.has_checked_in %}bg-primary/20 text-primary{% else %}bg-warning/20 text-warning{% endif %} flex items-center justify-center font-bold text-xs">{{ status.user.full_name|make_list|first|upper }}</span>
                 {% endif %}
                 <div>
-                    <p class="text-xs font-bold text-on-surface">{{ user.full_name }}</p>
-                    <p class="text-[10px] text-on-surface-variant">{{ user.position }}</p>
+                    <p class="text-xs font-bold text-on-surface">{{ status.user.full_name }}</p>
+                    <p class="text-[10px] text-on-surface-variant">{{ status.user.position }}</p>
                 </div>
             </div>
+            {% if status.has_checked_in %}
+            <span class="text-[9px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">Checked In</span>
+            {% else %}
             <span class="text-[9px] font-bold uppercase tracking-wider text-warning bg-warning/10 px-2 py-0.5 rounded border border-warning/20">Not Checked In</span>
+            {% endif %}
         </div>
         {% empty %}
         <div class="text-center py-6 border border-dashed border-outline-variant/50 rounded bg-background/30">
-            <span class="material-symbols-outlined text-outline text-2xl mb-1">check_circle</span>
-            <p class="text-[11px] text-outline font-medium">All staff have checked in today.</p>
+            <span class="material-symbols-outlined text-outline text-2xl mb-1">group_off</span>
+            <p class="text-[11px] text-outline font-medium">No staff members found.</p>
         </div>
         {% endfor %}
     </div>
@@ -117,20 +133,9 @@
     </div>
     <div class="max-h-48 overflow-y-auto space-y-2 pr-2">
         {% for leave in on_leave_today %}
-        <div class="flex items-center justify-between bg-surface-container-highest p-2 rounded border border-outline-variant/50 hover:border-info/30 transition-colors">
-            <div class="flex items-center gap-3">
-                <span class="w-8 h-8 rounded-full bg-info/20 text-info flex items-center justify-center font-bold text-xs">{{ leave.employee_name|make_list|first|upper }}</span>
-                <div>
-                    <p class="text-xs font-bold text-on-surface">{{ leave.employee_name }}</p>
-                    <p class="text-[10px] text-on-surface-variant">{{ leave.leave_type }} Leave</p>
-                </div>
-            </div>
-            <span class="text-[9px] font-bold uppercase tracking-wider text-info bg-info/10 px-2 py-0.5 rounded border border-info/20">Approved</span>
-        </div>
-        {% empty %}
-        <div class="text-center py-6 border border-dashed border-outline-variant/50 rounded bg-background/30">
-            <span class="material-symbols-outlined text-outline text-2xl mb-1">event_available</span>
-            <p class="text-[11px] text-outline font-medium">No one is on leave today.</p>
+        <div class="flex items-center bg-surface-container-highest p-3 rounded border border-outline-variant/50 hover:border-info/30 transition-colors">
+            <span class="material-symbols-outlined text-info text-[16px] mr-2">person</span>
+            <p class="text-sm font-bold text-on-surface">{{ leave.employee_name }}</p>
         </div>
         {% endfor %}
     </div>
@@ -252,6 +257,26 @@
     </div>
 </div>
 
+<!-- Checkout Confirmation Modal -->
+<div id="checkoutModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+    <div class="bg-surface-container border border-outline-variant p-6 rounded-xl w-full max-w-sm shadow-2xl relative text-center">
+        <span class="material-symbols-outlined text-error text-5xl mb-4">logout</span>
+        <h3 class="font-headline-sm text-headline-sm text-on-surface mb-2">Confirm Check-Out</h3>
+        <p class="text-on-surface-variant text-sm mb-6">Are you sure you want to end your shift? Your check-out coordinates will be permanently recorded.</p>
+        
+        <div class="flex gap-4 w-full">
+            <button onclick="toggleModal('checkoutModal')" class="flex-1 py-2.5 border border-outline-variant text-on-surface hover:bg-surface-variant rounded-lg transition-colors font-label-bold text-xs uppercase tracking-wider">Cancel</button>
+            <button onclick="processCheckInOut()" class="flex-1 py-2.5 bg-error text-on-error hover:brightness-110 rounded-lg transition-colors font-label-bold text-xs uppercase tracking-wider">Confirm Out</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleModal(modalId) {
+        document.getElementById(modalId).classList.toggle('hidden');
+    }
+</script>
+
 {% endblock content %}
 
 {% block scripts %}
@@ -292,21 +317,31 @@
         checkBtn.classList.replace('text-on-primary-container', 'text-on-surface-variant');
         checkBtn.classList.add('cursor-not-allowed', 'opacity-70');
 
+        const IS_REMOTE_ALLOWED = {{ is_remote_allowed|yesno:"true,false"|default:"false" }};
+        const IS_CHECKED_IN = {{ is_checked_in|yesno:"true,false"|default:"false" }};
+        const IS_CHECKED_OUT = {{ is_checked_out|yesno:"true,false"|default:"false" }};
+
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 const distance = calculateDistance(position.coords.latitude, position.coords.longitude, OFFICE_LAT, OFFICE_LNG);
-                if (distance <= GEOFENCE_RADIUS) {
-                    checkBtn.disabled = false;
-                    checkBtn.innerHTML = `<span class="material-symbols-outlined">login</span> Check In`;
-                    checkBtn.classList.replace('bg-surface-container-highest', 'bg-primary-container');
-                    checkBtn.classList.replace('text-on-surface-variant', 'text-on-primary-container');
-                    checkBtn.classList.remove('cursor-not-allowed', 'opacity-70');
+                if (distance <= GEOFENCE_RADIUS || IS_REMOTE_ALLOWED) {
+                    if (IS_CHECKED_OUT) {
+                        checkBtn.disabled = true;
+                        checkBtn.innerHTML = `<span class="material-symbols-outlined">logout</span> Checked Out`;
+                        checkBtn.className = "w-full bg-surface-container text-on-surface-variant/40 font-headline-sm py-4 rounded flex items-center justify-center gap-3 cursor-not-allowed opacity-50";
+                    } else if (IS_CHECKED_IN) {
+                        checkBtn.disabled = false;
+                        checkBtn.innerHTML = `<span class="material-symbols-outlined">logout</span> Initiate Check-Out`;
+                        checkBtn.className = "w-full bg-error text-on-error font-headline-sm py-4 rounded flex items-center justify-center gap-3 active:scale-95 transition-transform hover:brightness-110";
+                    } else {
+                        checkBtn.disabled = false;
+                        checkBtn.innerHTML = `<span class="material-symbols-outlined">login</span> Initiate Check-In ${distance > GEOFENCE_RADIUS ? '(Remote)' : ''}`;
+                        checkBtn.className = "w-full bg-primary-container text-on-primary-container font-headline-sm py-4 rounded flex items-center justify-center gap-3 active:scale-95 transition-transform hover:brightness-110";
+                    }
                 } else {
                     checkBtn.disabled = true;
                     checkBtn.innerHTML = `<span class="material-symbols-outlined">gpp_bad</span> Out of Range (${distance.toFixed(0)}m)`;
-                    checkBtn.classList.replace('bg-surface-container-highest', 'bg-error');
-                    checkBtn.classList.replace('text-on-surface-variant', 'text-on-error');
-                    checkBtn.classList.add('cursor-not-allowed');
+                    checkBtn.className = "w-full bg-error text-on-error font-headline-sm py-4 rounded flex items-center justify-center gap-3 cursor-not-allowed";
                 }
             },
             (error) => {
@@ -318,12 +353,20 @@
                 // Fallback simulation for demo purposes if GPS is denied/unavailable
                 const simDist = calculateDistance(27.677420, 85.398010, OFFICE_LAT, OFFICE_LNG);
                 setTimeout(() => {
-                    if (simDist <= GEOFENCE_RADIUS) {
-                        checkBtn.disabled = false;
-                        checkBtn.innerHTML = `<span class="material-symbols-outlined">login</span> Check In (Simulated)`;
-                        checkBtn.classList.replace('bg-surface-container-highest', 'bg-primary-container');
-                        checkBtn.classList.replace('text-on-surface-variant', 'text-on-primary-container');
-                        checkBtn.classList.remove('cursor-not-allowed', 'opacity-70');
+                    if (simDist <= GEOFENCE_RADIUS || IS_REMOTE_ALLOWED) {
+                        if (IS_CHECKED_OUT) {
+                            checkBtn.disabled = true;
+                            checkBtn.innerHTML = `<span class="material-symbols-outlined">logout</span> Checked Out`;
+                            checkBtn.className = "w-full bg-surface-container text-on-surface-variant/40 font-headline-sm py-4 rounded flex items-center justify-center gap-3 cursor-not-allowed opacity-50";
+                        } else if (IS_CHECKED_IN) {
+                            checkBtn.disabled = false;
+                            checkBtn.innerHTML = `<span class="material-symbols-outlined">logout</span> Initiate Check-Out`;
+                            checkBtn.className = "w-full bg-error text-on-error font-headline-sm py-4 rounded flex items-center justify-center gap-3 active:scale-95 transition-transform hover:brightness-110";
+                        } else {
+                            checkBtn.disabled = false;
+                            checkBtn.innerHTML = `<span class="material-symbols-outlined">login</span> Initiate Check-In (Simulated)`;
+                            checkBtn.className = "w-full bg-primary-container text-on-primary-container font-headline-sm py-4 rounded flex items-center justify-center gap-3 active:scale-95 transition-transform hover:brightness-110";
+                        }
                     }
                 }, 2000);
             },
@@ -331,14 +374,53 @@
         );
     }
 
-    function toggleCheck() {
-        if(!checkBtn.disabled) {
-            checkBtn.innerHTML = `<span class="material-symbols-outlined">check_circle</span> Checked In`;
-            checkBtn.classList.replace('bg-primary-container', 'bg-primary');
-            checkBtn.classList.replace('text-on-primary-container', 'text-on-primary');
-            checkBtn.disabled = true;
-            checkBtn.classList.add('cursor-not-allowed');
+    window.processCheckInOut = function() {
+        if(!checkBtn || checkBtn.disabled) return;
+        
+        const modal = document.getElementById('checkoutModal');
+        if (modal && !modal.classList.contains('hidden')) {
+            modal.classList.add('hidden');
         }
-    }
+
+        const originalText = checkBtn.innerHTML;
+        checkBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">sync</span> Authenticating...`;
+        checkBtn.disabled = true;
+        
+        const formData = new FormData();
+        formData.append('action', 'check_in_out');
+        formData.append('latitude', '27.677420'); // Using simulated coordinates for demo
+        formData.append('longitude', '85.398010');
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        fetch('', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                checkBtn.innerHTML = `<span class="material-symbols-outlined">check_circle</span> SUCCESS`;
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                checkBtn.innerHTML = `<span class="material-symbols-outlined">error</span> FAILED`;
+                setTimeout(() => {
+                    checkBtn.innerHTML = originalText;
+                    checkBtn.disabled = false;
+                }, 2000);
+            }
+        })
+        .catch(err => {
+            checkBtn.innerHTML = `<span class="material-symbols-outlined">error</span> ERROR`;
+            setTimeout(() => {
+                checkBtn.innerHTML = originalText;
+                checkBtn.disabled = false;
+            }, 2000);
+        });
+    };
 </script>
 {% endblock scripts %}

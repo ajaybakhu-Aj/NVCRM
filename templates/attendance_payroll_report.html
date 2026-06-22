@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Dashboard Header -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
+    <div>
+        <h3 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Executive Payroll & Attendance</h3>
+        <p class="text-on-surface-variant font-body-md mt-1">Classified Workforce Telemetry & Compensation Report</p>
+    </div>
+    <div class="flex items-center gap-3">
+        <button onclick="window.print()" class="flex items-center gap-2 bg-surface-container border border-outline-variant hover:bg-surface-variant transition-colors text-on-surface px-4 py-2 rounded-lg font-label-bold text-xs uppercase tracking-widest shadow-sm">
+            <span class="material-symbols-outlined text-[18px]">print</span>
+            Export Ledger
+        </button>
+    </div>
+</div>
+
+<!-- Executive Overview Metrics -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+    <div class="bg-surface-container border border-outline-variant rounded-xl p-6 relative overflow-hidden group">
+        <div class="absolute top-0 right-0 -mr-4 -mt-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+            <span class="material-symbols-outlined" style="font-size: 120px;">group</span>
+        </div>
+        <p class="font-label-caps text-label-caps text-outline text-[10px] uppercase tracking-widest mb-1">Total Payroll Staff</p>
+        <h2 class="font-headline-lg text-on-surface text-4xl tracking-tight">{{ payroll_data|length }}</h2>
+        <div class="mt-4 flex items-center gap-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+            <span class="text-[10px] text-on-surface-variant font-semibold uppercase tracking-wider">Active Directory</span>
+        </div>
+    </div>
+    
+    <div class="bg-surface-container border border-outline-variant rounded-xl p-6 relative overflow-hidden group">
+        <div class="absolute top-0 right-0 -mr-4 -mt-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+            <span class="material-symbols-outlined" style="font-size: 120px;">fact_check</span>
+        </div>
+        <p class="font-label-caps text-label-caps text-outline text-[10px] uppercase tracking-widest mb-1">Total Logs Processed</p>
+        <h2 class="font-headline-lg text-primary text-4xl tracking-tight">{{ attendance_records|length }}</h2>
+        <div class="mt-4 flex items-center gap-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+            <span class="text-[10px] text-on-surface-variant font-semibold uppercase tracking-wider">Live Sync</span>
+        </div>
+    </div>
+
+    <div class="bg-primary-container border border-primary/20 rounded-xl p-6 relative overflow-hidden group">
+        <div class="absolute top-0 right-0 -mr-4 -mt-4 opacity-20 text-on-primary-container group-hover:rotate-12 transition-transform duration-500">
+            <span class="material-symbols-outlined" style="font-size: 120px;">verified_user</span>
+        </div>
+        <p class="font-label-caps text-label-caps text-on-primary-container/70 text-[10px] uppercase tracking-widest mb-1">Report Clearance</p>
+        <h2 class="font-headline-lg text-on-primary-container text-4xl tracking-tight">SECURE</h2>
+        <div class="mt-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-[14px] text-on-primary-container">lock</span>
+            <span class="text-[10px] text-on-primary-container font-semibold uppercase tracking-wider">Level 5 Clearance Verified</span>
+        </div>
+    </div>
+</div>
+
+<!-- Main Modules Container -->
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+    
+    <!-- Left Column: Payroll Summary Table -->
+    <section class="flex flex-col gap-4">
+        <div class="flex justify-between items-center px-1">
+            <h4 class="font-headline-sm text-headline-sm text-on-surface">Compensation Ledger</h4>
+            <span class="text-[10px] font-label-caps uppercase tracking-widest text-outline">Automated Calculation</span>
+        </div>
+        
+        <div class="bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-lg flex-1">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-surface-container-low border-b border-outline-variant">
+                        <tr>
+                            <th class="px-6 py-4 text-[10px] font-label-caps text-outline uppercase tracking-widest">Target Asset</th>
+                            <th class="px-6 py-4 text-[10px] font-label-caps text-outline uppercase tracking-widest text-right">Work Hours</th>
+                            <th class="px-6 py-4 text-[10px] font-label-caps text-outline uppercase tracking-widest text-right">Base / Hr</th>
+                            <th class="px-6 py-4 text-[10px] font-label-caps text-outline uppercase tracking-widest text-right">Total Payout</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-outline-variant/30">
+                        {% for pay in payroll_data %}
+                        <tr class="hover:bg-surface-container-high transition-colors group">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded bg-surface-container-highest border border-outline-variant flex items-center justify-center text-primary font-bold text-xs">
+                                        {{ pay.employee_name|make_list|first }}
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold text-sm text-on-surface">{{ pay.employee_name }}</p>
+                                        <p class="text-[10px] text-on-surface-variant uppercase tracking-wider mt-0.5">{{ pay.position }}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <span class="font-data-mono text-primary text-sm font-semibold">{{ pay.total_hours }} h</span>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <div class="flex flex-col items-end">
+                                    <span class="font-data-mono text-on-surface text-xs">NPR {{ pay.hourly_rate|floatformat:2 }}</span>
+                                    <span class="text-[9px] text-outline mt-0.5 border border-outline-variant rounded px-1">{{ pay.base_salary|floatformat:0 }} Base</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <span class="font-data-mono text-primary text-base font-bold bg-primary/10 px-2 py-1 rounded border border-primary/20">
+                                    NPR {{ pay.total_pay|floatformat:2 }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="px-6 py-12 text-center text-on-surface-variant">
+                                <span class="material-symbols-outlined text-4xl opacity-30 mb-2 block">folder_off</span>
+                                <p class="text-sm">No payroll data extracted.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Right Column: Raw Attendance Telemetry -->
+    <section class="flex flex-col gap-4">
+        <div class="flex justify-between items-center px-1">
+            <h4 class="font-headline-sm text-headline-sm text-on-surface">Raw Attendance Telemetry</h4>
+            <span class="text-[10px] font-label-caps uppercase tracking-widest text-outline">Global Satellite Feed</span>
+        </div>
+        
+        <div class="bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-lg flex-1 flex flex-col h-[500px]">
+            <div class="overflow-y-auto flex-1 custom-scrollbar">
+                <table class="w-full text-left border-collapse relative">
+                    <thead class="bg-surface-container-low border-b border-outline-variant sticky top-0 z-10">
+                        <tr>
+                            <th class="px-4 py-4 text-[10px] font-label-caps text-outline uppercase tracking-widest">Asset Log</th>
+                            <th class="px-4 py-4 text-[10px] font-label-caps text-outline uppercase tracking-widest">Chronology</th>
+                            <th class="px-4 py-4 text-[10px] font-label-caps text-outline uppercase tracking-widest">Status</th>
+                            <th class="px-4 py-4 text-[10px] font-label-caps text-outline uppercase tracking-widest text-right">Coordinates</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-outline-variant/30">
+                        {% for record in attendance_records %}
+                        <tr class="hover:bg-surface-container-high transition-colors">
+                            <td class="px-4 py-3">
+                                <p class="font-semibold text-xs text-on-surface">{{ record.employee_name }}</p>
+                                <p class="text-[10px] text-on-surface-variant font-data-mono mt-0.5">{{ record.date|date:"Y-m-d" }}</p>
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="flex flex-col gap-1">
+                                    {% if record.check_in_time %}
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                                        <span class="font-data-mono text-[10px] text-on-surface">IN: {{ record.check_in_time|time:"H:i" }}</span>
+                                    </div>
+                                    {% else %}
+                                    <div class="flex items-center gap-2 opacity-30">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                                        <span class="font-data-mono text-[10px] text-on-surface">IN: --:--</span>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if record.check_out_time %}
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+                                        <span class="font-data-mono text-[10px] text-on-surface">OUT: {{ record.check_out_time|time:"H:i" }}</span>
+                                    </div>
+                                    {% else %}
+                                    <div class="flex items-center gap-2 opacity-30">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                                        <span class="font-data-mono text-[10px] text-on-surface">OUT: --:--</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="px-4 py-3">
+                                {% if record.status == 'Present' %}
+                                    <span class="inline-block bg-primary/10 text-primary border border-primary/20 text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Present</span>
+                                {% elif record.status == 'Late' %}
+                                    <span class="inline-block bg-amber-400/10 text-amber-300 border border-amber-400/20 text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Late</span>
+                                {% elif record.status == 'Absent' %}
+                                    <span class="inline-block bg-error/10 text-error border border-error/20 text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Absent</span>
+                                {% else %}
+                                    <span class="inline-block bg-blue-400/10 text-blue-400 border border-blue-400/20 text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">{{ record.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                {% if record.latitude and record.longitude %}
+                                    <a href="https://maps.google.com/?q={{ record.latitude }},{{ record.longitude }}" target="_blank" class="inline-flex flex-col items-end group hover:text-primary transition-colors cursor-pointer text-on-surface-variant">
+                                        <span class="flex items-center gap-1 text-[10px] font-label-bold uppercase tracking-widest group-hover:text-primary">
+                                            <span class="material-symbols-outlined text-[12px]">satellite_alt</span>
+                                            MAP LINK
+                                        </span>
+                                        <span class="font-data-mono text-[9px] mt-0.5 group-hover:text-primary-fixed">{{ record.latitude|floatformat:4 }}°, {{ record.longitude|floatformat:4 }}°</span>
+                                    </a>
+                                {% else %}
+                                    <span class="text-[9px] text-outline font-data-mono italic">NO SIGNAL</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="px-4 py-12 text-center text-on-surface-variant">
+                                <span class="material-symbols-outlined text-4xl opacity-30 mb-2 block">location_off</span>
+                                <p class="text-sm">No telemetry records broadcasted.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+
+<style>
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(3, 20, 39, 0.5); 
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #26364a; 
+        border-radius: 3px;
+    }
+    
+    @media print {
+        body { background-color: #fff !important; color: #000 !important; }
+        .bg-surface-container, .bg-surface-container-low, .bg-primary-container, .bg-surface-container-highest { background: #fff !important; border-color: #ccc !important; }
+        .text-on-surface, .text-primary, .text-on-primary-container, .text-on-surface-variant { color: #000 !important; }
+        .text-outline { color: #555 !important; }
+        .material-symbols-outlined { color: #000 !important; }
+        .bg-primary\/10 { background: transparent !important; }
+        aside, header, button { display: none !important; }
+        .grid-cols-2 { grid-template-columns: 1fr !important; }
+        main { padding: 0 !important; margin: 0 !important; }
+        .custom-scrollbar { overflow: visible !important; height: auto !important; }
+        .h-\[500px\] { height: auto !important; }
+    }
+</style>
+{% endblock %}

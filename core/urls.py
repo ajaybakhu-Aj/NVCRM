@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import DashboardView, AttendanceCheckinView, InventoryListView, UserCreateView, NoticeBoardView, LeaveListView, LeadPipelineView, ProcurementView, AccountsReceivableView, SwitchRoleView, LoginView, LogoutView, POSView, POSCheckoutView, POSInvoiceView
+from .views import DashboardView, AttendanceCheckinView, InventoryListView, UserCreateView, NoticeBoardView, LeaveListView, LeadPipelineView, ProcurementView, AccountsReceivableView, SwitchRoleView, LoginView, LogoutView, POSView, POSCheckoutView, POSInvoiceView, StaffPayrollReportView, ProjectTaskBoardView
 
 urlpatterns = [
     path('login/', LoginView.as_view(), name='login'),
@@ -17,4 +17,6 @@ urlpatterns = [
     path('procurement/', ProcurementView.as_view(), name='procurement_list'),
     path('accounts-receivable/', AccountsReceivableView.as_view(), name='accounts_receivable'),
     path('switch-role/', SwitchRoleView.as_view(), name='switch_role'),
+    path('attendance-payroll-report/', StaffPayrollReportView.as_view(), name='attendance_payroll_report'),
+    path('task-board/', ProjectTaskBoardView.as_view(), name='task_board'),
 ]

@@ -106,9 +106,19 @@
         
         <!-- Action Section -->
         <div class="mt-4 pt-3 border-t border-outline-variant">
-            <button class="w-full bg-primary text-on-primary py-3 px-4 font-label-bold text-center uppercase tracking-widest transition-all hover:brightness-110 active:scale-[0.98] pulse-marker geofence-glow border border-primary rounded text-xs cursor-pointer" id="checkInBtn">
-                Check In / Out
-            </button>
+            {% if is_checked_out %}
+                <button disabled class="w-full bg-surface-container text-on-surface-variant/40 py-3 px-4 font-label-bold text-center uppercase tracking-widest border border-outline-variant rounded cursor-not-allowed opacity-50 text-xs">
+                    CHECKED OUT FOR TODAY
+                </button>
+            {% elif is_checked_in %}
+                <button class="w-full bg-error text-on-error py-3 px-4 font-label-bold text-center uppercase tracking-widest transition-all hover:brightness-110 active:scale-[0.98] pulse-marker geofence-glow border border-error rounded text-xs cursor-pointer" id="checkInBtn" onclick="toggleModal('checkoutModal')">
+                    INITIATE CHECK-OUT
+                </button>
+            {% else %}
+                <button class="w-full bg-primary text-on-primary py-3 px-4 font-label-bold text-center uppercase tracking-widest transition-all hover:brightness-110 active:scale-[0.98] pulse-marker geofence-glow border border-primary rounded text-xs cursor-pointer" id="checkInBtn">
+                    INITIATE CHECK-IN
+                </button>
+            {% endif %}
         </div>
     </section>
     
@@ -264,8 +274,30 @@
                 {% endfor %}
             {% endfor %}
         </div>
+        </div>
     </div>
 </div>
+
+<!-- Checkout Confirmation Modal -->
+<div id="checkoutModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+    <div class="bg-surface-container border border-outline-variant p-6 rounded-xl w-full max-w-sm shadow-2xl relative text-center">
+        <span class="material-symbols-outlined text-error text-5xl mb-4">logout</span>
+        <h3 class="font-headline-sm text-headline-sm text-on-surface mb-2">Confirm Check-Out</h3>
+        <p class="text-on-surface-variant text-sm mb-6">Are you sure you want to end your shift? Your check-out coordinates will be permanently recorded.</p>
+        
+        <div class="flex gap-4 w-full">
+            <button onclick="toggleModal('checkoutModal')" class="flex-1 py-2.5 border border-outline-variant text-on-surface hover:bg-surface-variant rounded-lg transition-colors font-label-bold text-xs uppercase tracking-wider">Cancel</button>
+            <button onclick="processCheckInOut()" class="flex-1 py-2.5 bg-error text-on-error hover:brightness-110 rounded-lg transition-colors font-label-bold text-xs uppercase tracking-wider">Confirm Out</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleModal(modalId) {
+        document.getElementById(modalId).classList.toggle('hidden');
+    }
+</script>
+
 {% endblock content %}
 
 {% block scripts %}
@@ -346,11 +378,14 @@
     const hudXEl = document.getElementById('hud-x');
     const hudYEl = document.getElementById('hud-y');
     const checkInBtn = document.getElementById('checkInBtn');
+    const IS_REMOTE_ALLOWED = {{ is_remote_allowed|yesno:"true,false" }};
+    const IS_CHECKED_IN = {{ is_checked_in|yesno:"true,false" }};
+    const IS_CHECKED_OUT = {{ is_checked_out|yesno:"true,false" }};
     const csrfToken = document.getElementById('csrfToken').value;
 
     function updateLocationUI(lat, lng) {
         const distance = calculateDistance(lat, lng, OFFICE_LAT, OFFICE_LNG);
-        const isAuthorized = distance <= GEOFENCE_RADIUS;
+        const isAuthorized = distance <= GEOFENCE_RADIUS || IS_REMOTE_ALLOWED;
 
         userLatEl.textContent = lat.toFixed(6) + '° N';
         userLngEl.textContent = lng.toFixed(6) + '° E';
@@ -364,14 +399,26 @@
         hudYEl.textContent = (lng - OFFICE_LNG).toFixed(6);
 
         if (isAuthorized) {
-            nodeStatusEl.textContent = 'AUTHORIZED';
+            if (distance <= GEOFENCE_RADIUS) {
+                nodeStatusEl.textContent = 'AUTHORIZED';
+            } else {
+                nodeStatusEl.textContent = 'REMOTE AUTH';
+            }
             nodeStatusEl.className = 'font-headline-md text-primary font-bold text-sm transition-colors';
             nodeStatusIconEl.textContent = 'verified_user';
             nodeStatusIconEl.className = 'material-symbols-outlined text-primary text-2xl transition-colors';
             
             if (checkInBtn) {
-                checkInBtn.disabled = false;
-                checkInBtn.className = "w-full bg-primary text-on-primary py-3 px-4 font-label-bold text-center uppercase tracking-widest transition-all hover:brightness-110 active:scale-[0.98] pulse-marker geofence-glow border border-primary rounded text-xs cursor-pointer";
+                if (IS_CHECKED_OUT) {
+                    checkInBtn.disabled = true;
+                    checkInBtn.className = "w-full bg-surface-container text-on-surface-variant/40 py-3 px-4 font-label-bold text-center uppercase tracking-widest border border-outline-variant rounded cursor-not-allowed opacity-50 text-xs";
+                } else if (IS_CHECKED_IN) {
+                    checkInBtn.disabled = false;
+                    checkInBtn.className = "w-full bg-error text-on-error py-3 px-4 font-label-bold text-center uppercase tracking-widest transition-all hover:brightness-110 active:scale-[0.98] pulse-marker geofence-glow border border-error rounded text-xs cursor-pointer";
+                } else {
+                    checkInBtn.disabled = false;
+                    checkInBtn.className = "w-full bg-primary text-on-primary py-3 px-4 font-label-bold text-center uppercase tracking-widest transition-all hover:brightness-110 active:scale-[0.98] pulse-marker geofence-glow border border-primary rounded text-xs cursor-pointer";
+                }
             }
         } else {
             nodeStatusEl.textContent = 'OUT OF RANGE';
@@ -416,63 +463,74 @@
         updateLocationUI(SIMULATED_LAT, SIMULATED_LNG);
     }
 
-    // Connect Click to POST Request
-    if (checkInBtn) {
-        checkInBtn.addEventListener('click', () => {
-            const originalText = checkInBtn.innerText;
-            checkInBtn.innerText = 'AUTHENTICATING...';
-            checkInBtn.disabled = true;
-            checkInBtn.classList.remove('pulse-marker');
+    // Process Check-in/out Request
+    window.processCheckInOut = function() {
+        if (!checkInBtn) return;
+        
+        // Hide modal if open
+        const modal = document.getElementById('checkoutModal');
+        if (modal && !modal.classList.contains('hidden')) {
+            modal.classList.add('hidden');
+        }
 
-            // Send simulated coordinates
-            const lat = userMarker.getLatLng().lat;
-            const lng = userMarker.getLatLng().lng;
+        const originalText = checkInBtn.innerText;
+        checkInBtn.innerText = 'AUTHENTICATING...';
+        checkInBtn.disabled = true;
+        checkInBtn.classList.remove('pulse-marker');
 
-            const formData = new FormData();
-            formData.append('latitude', lat);
-            formData.append('longitude', lng);
-            formData.append('csrfmiddlewaretoken', csrfToken);
+        // Send simulated coordinates
+        const lat = userMarker.getLatLng().lat;
+        const lng = userMarker.getLatLng().lng;
 
-            fetch('', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    if (data.checked_out) {
-                        checkInBtn.innerText = 'CHECK-OUT SUCCESSFUL';
-                    } else {
-                        checkInBtn.innerText = 'CHECK-IN SUCCESSFUL';
-                    }
-                    checkInBtn.style.backgroundColor = '#466600';
-                    checkInBtn.style.color = '#dcff9e';
-                    
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
+        const formData = new FormData();
+        formData.append('latitude', lat);
+        formData.append('longitude', lng);
+        formData.append('csrfmiddlewaretoken', csrfToken);
+
+        fetch('', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                if (data.checked_out) {
+                    checkInBtn.innerText = 'CHECK-OUT SUCCESSFUL';
                 } else {
-                    checkInBtn.innerText = 'FAILED';
-                    setTimeout(() => {
-                        checkInBtn.innerText = originalText;
-                        checkInBtn.disabled = false;
-                        checkInBtn.classList.add('pulse-marker');
-                    }, 2000);
+                    checkInBtn.innerText = 'CHECK-IN SUCCESSFUL';
                 }
-            })
-            .catch(err => {
-                console.error(err);
-                checkInBtn.innerText = 'ERROR';
+                checkInBtn.style.backgroundColor = '#466600';
+                checkInBtn.style.color = '#dcff9e';
+                
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                checkInBtn.innerText = 'FAILED';
                 setTimeout(() => {
                     checkInBtn.innerText = originalText;
                     checkInBtn.disabled = false;
                     checkInBtn.classList.add('pulse-marker');
                 }, 2000);
-            });
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            checkInBtn.innerText = 'ERROR';
+            setTimeout(() => {
+                checkInBtn.innerText = originalText;
+                checkInBtn.disabled = false;
+                checkInBtn.classList.add('pulse-marker');
+            }, 2000);
         });
+    };
+
+    // Connect Click to POST Request for Check-In
+    if (checkInBtn && !checkInBtn.hasAttribute('onclick')) {
+        checkInBtn.addEventListener('click', processCheckInOut);
     }
 </script>
 {% endblock scripts %}
