@@ -57,6 +57,38 @@
 
 <!-- Procurement Pipeline Workflows List -->
 <div class="bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+    <table class="hidden">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Track</th>
+                <th>Status</th>
+                <th>LCM</th>
+                <th>GRN</th>
+                <th>HR Approved</th>
+                <th>CTO Approved</th>
+                <th>COO Approved</th>
+                <th>CEO Approved</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for req in requests %}
+            <tr>
+                <td>{{ req.id }}</td>
+                <td>{{ req.title }}</td>
+                <td>{{ req.track }}</td>
+                <td>{% if req.is_terminal %}Approved{% else %}Pending{% endif %}</td>
+                <td>{{ req.landing_cost_management }}</td>
+                <td>{{ req.goods_receive_notes }}</td>
+                <td>{{ req.hr_approved }}</td>
+                <td>{{ req.cto_approved }}</td>
+                <td>{{ req.coo_approved }}</td>
+                <td>{{ req.ceo_approved }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
     <div class="p-5 border-b border-outline-variant bg-surface-container-low flex justify-between items-center">
         <h4 class="font-label-bold text-label-bold text-on-surface uppercase tracking-wider">Active Purchase Authorizations</h4>
     </div>
@@ -90,6 +122,14 @@
                             <a href="{{ req.supporting_document.url }}" target="_blank" class="bg-primary-container/15 text-primary-fixed border border-primary-fixed/30 hover:border-primary-fixed px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase flex items-center gap-1 transition-all" title="View Uploaded Document">
                                 <span class="material-symbols-outlined text-[12px]">description</span> VIEW ATTACHMENT
                             </a>
+                        {% endif %}
+                    </div>
+                    <div class="flex items-center gap-4 mt-2 text-xs text-on-surface-variant font-data-mono">
+                        {% if req.landing_cost_management %}
+                        <span>LCM: NPR {{ req.landing_cost_management }}</span>
+                        {% endif %}
+                        {% if req.goods_receive_notes %}
+                        <span>GRN: {{ req.goods_receive_notes }}</span>
                         {% endif %}
                     </div>
                 </div>
@@ -242,6 +282,16 @@
                 <div>
                     <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Supporting Document (PDF, Image, etc.)</label>
                     <input type="file" name="supporting_document" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded">
+                </div>
+                
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Landing Cost Management (LCM)</label>
+                    <input type="number" step="0.01" name="landing_cost_management" placeholder="0.00" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded">
+                </div>
+                
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Goods Receive Notes (GRN)</label>
+                    <input type="text" name="goods_receive_notes" placeholder="e.g. GRN-2026-001" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded">
                 </div>
             </div>
 

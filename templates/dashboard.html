@@ -1,6 +1,15 @@
 {% extends "base.html" %}
 
 {% block content %}
+<!-- Nepali Datepicker CDN -->
+<link href="https://nepalidatepicker.sajanmaharjan.com.np/v5/nepali.datepicker/css/nepali.datepicker.v5.0.6.min.css" rel="stylesheet" type="text/css"/>
+<style>
+    /* Ensure the datepicker is above all modals and navs */
+    #ndp-nepali-box {
+        z-index: 9999 !important;
+    }
+</style>
+
 <!-- Dashboard Header -->
 <div class="flex justify-between items-end mb-8">
 <div>
@@ -51,8 +60,16 @@
         <span id="btnText">Initiate Check-In</span>
     </button>
 {% endif %}
-<div class="flex justify-between items-center mt-4 px-1">
-<p class="text-xs text-on-surface-variant">Status Update</p>
+<div class="mt-4 px-1 p-3 bg-surface-container border border-outline-variant rounded">
+    <p class="font-label-caps text-label-caps text-on-surface-variant mb-2 text-[10px] uppercase tracking-wider">TODAY'S TIMESTAMP</p>
+    <div class="flex justify-between items-center text-xs">
+        <span class="text-outline font-label-caps">IN:</span>
+        <span class="font-data-mono text-primary font-bold">{% if today_record.check_in_time %}{{ today_record.check_in_time|time:"h:i A" }}{% else %}--:--{% endif %}</span>
+    </div>
+    <div class="flex justify-between items-center text-xs mt-1">
+        <span class="text-outline font-label-caps">OUT:</span>
+        <span class="font-data-mono text-on-surface">{% if today_record.check_out_time %}{{ today_record.check_out_time|time:"h:i A" }}{% else %}--:--{% endif %}</span>
+    </div>
 </div>
 </div>
 </div>
@@ -146,7 +163,7 @@
     <div class="flex justify-between items-center mb-6">
         <div class="flex items-center gap-2">
             <span class="material-symbols-outlined text-primary-fixed">calendar_month</span>
-            <h4 class="font-label-bold text-label-bold text-on-surface uppercase tracking-widest">Corporate Calendar (English)</h4>
+            <h4 class="font-label-bold text-label-bold text-on-surface uppercase tracking-widest">Corporate Calendar (Nepali)</h4>
         </div>
         <div class="flex items-center gap-4">
             <div class="flex items-center gap-4 bg-surface-container-lowest px-4 py-2 rounded border border-outline-variant">
@@ -236,8 +253,11 @@
                     <input type="text" name="title" required class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed" placeholder="e.g., Security Review">
                 </div>
                 <div>
-                    <label class="block text-[10px] text-outline font-label-caps mb-1">DATE</label>
-                    <input type="date" name="date" required class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed">
+                    <label class="block text-[10px] text-outline font-label-caps mb-1">DATE (Nepali)</label>
+                    <div class="relative">
+                        <input type="text" id="nepali-datepicker" name="date" required pattern="\d{4}-\d{2}-\d{2}" placeholder="YYYY-MM-DD" title="Please enter a valid Nepali date in YYYY-MM-DD format" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 pr-10 rounded focus:outline-none focus:border-primary-fixed cursor-text">
+                        <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">calendar_month</span>
+                    </div>
                 </div>
                 <div class="flex items-center gap-2 mt-2">
                     <input type="checkbox" name="is_holiday" id="is_holiday" class="rounded border-outline-variant text-error focus:ring-error bg-surface-container-lowest">
@@ -422,5 +442,19 @@
             }, 2000);
         });
     };
+</script>
+
+<script src="https://nepalidatepicker.sajanmaharjan.com.np/v5/nepali.datepicker/js/nepali.datepicker.v5.0.6.min.js" type="text/javascript"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var mainInput = document.getElementById("nepali-datepicker");
+        if(mainInput) {
+            mainInput.NepaliDatePicker({
+                ndpYear: true,
+                ndpMonth: true,
+                ndpYearCount: 20
+            });
+        }
+    });
 </script>
 {% endblock scripts %}

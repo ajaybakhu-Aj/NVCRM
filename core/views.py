@@ -10,8 +10,12 @@ class DashboardView(TemplateView):
 
     def get(self, request, *args, **kwargs):
         now = datetime.now()
-        year = int(request.GET.get('year', now.year))
-        month = int(request.GET.get('month', now.month))
+        import nepali_datetime
+        from .nepali_calendar import get_nepali_monthdatescalendar
+        
+        today_np = nepali_datetime.date.today()
+        year = int(request.GET.get('year', today_np.year))
+        month = int(request.GET.get('month', today_np.month))
 
         if month < 1:
             month = 12
@@ -20,15 +24,16 @@ class DashboardView(TemplateView):
             month = 1
             year += 1
 
-        # Populate default events if none exist in database
+        # Check for initial deployment events
         if not CalendarEvent.objects.exists():
+            CalendarEvent.objects.create(title="[HOLIDAY] Republic Day", date=date(2026, 5, 28), description="National Holiday")
+            CalendarEvent.objects.create(title="[HOLIDAY] Dashain", date=date(2026, 10, 15), description="Festival Holiday")
             CalendarEvent.objects.create(title="CTO Review", date=date(2026, 6, 3), description="Quarterly tech audit")
             CalendarEvent.objects.create(title="Inventory Audit", date=date(2026, 6, 10), description="HQ Stock Verification")
             CalendarEvent.objects.create(title="Payroll Sync", date=date(2026, 6, 19), description="June salaries sign-off")
             CalendarEvent.objects.create(title="System Patch", date=date(2026, 6, 25), description="Core ERP upgrade")
 
-        cal = calendar.Calendar(firstweekday=6) # Sunday start
-        weeks = cal.monthdatescalendar(year, month)
+        weeks = get_nepali_monthdatescalendar(year, month)
 
         start_date = weeks[0][0]
         end_date = weeks[-1][-1]
@@ -42,13 +47,14 @@ class DashboardView(TemplateView):
         for week in weeks:
             formatted_week = []
             for day in week:
-                is_current_month = (day.month == month)
+                day_np = nepali_datetime.date.from_datetime_date(day)
+                is_current_month = (day_np.month == month)
                 is_today = (day == now.date())
                 day_events = events_by_date.get(day, [])
                 is_holiday = any('[HOLIDAY]' in e.title for e in day_events)
                 formatted_week.append({
                     'date': day,
-                    'day_num': day.day,
+                    'day_num': day_np.day, # Use Nepali day for rendering
                     'is_current_month': is_current_month,
                     'is_today': is_today,
                     'events': day_events,
@@ -68,7 +74,9 @@ class DashboardView(TemplateView):
             next_month = 1
             next_year += 1
 
-        month_name = calendar.month_name[month]
+        # Nepali month names
+        np_months = ["Baisakh", "Jestha", "Ashadh", "Shrawan", "Bhadra", "Ashwin", "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra"]
+        month_name = np_months[month - 1]
         
         # Calculate Dashboard Activity (Leaves & Missing Attendance)
         from .models import LeaveRequest, AttendanceRecord, SystemUserProfile
@@ -119,6 +127,7 @@ class DashboardView(TemplateView):
             'is_remote_allowed': is_remote_allowed,
             'is_checked_in': is_checked_in,
             'is_checked_out': is_checked_out,
+            'today_record': today_record,
         }
         return render(request, self.template_name, context)
 
@@ -147,13 +156,19 @@ class DashboardView(TemplateView):
 
         if title and date_str:
             try:
-                event_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                import nepali_datetime
+                # Parse the incoming Nepali date (YYYY-MM-DD)
+                year_part, month_part, day_part = map(int, date_str.split('-'))
+                np_date = nepali_datetime.date(year_part, month_part, day_part)
+                # Convert to standard Gregorian date for database storage
+                event_date = np_date.to_datetime_date()
+                
                 CalendarEvent.objects.create(
                     title=title,
                     description=description,
                     date=event_date
                 )
-            except ValueError:
+            except (ValueError, TypeError):
                 pass
 
         if action == 'check_in_out':
@@ -191,7 +206,7 @@ class DashboardView(TemplateView):
                 }
             )
 
-            if not created:
+            if not created and not record.check_out_time:
                 record.check_out_time = current_time
                 record.save()
 
@@ -359,6 +374,7 @@ class AttendanceCheckinView(TemplateView):
             'is_remote_allowed': is_remote_allowed,
             'is_checked_in': is_checked_in,
             'is_checked_out': is_checked_out,
+            'today_record': today_record,
         }
         return render(request, self.template_name, context)
 
@@ -395,7 +411,7 @@ class AttendanceCheckinView(TemplateView):
             }
         )
 
-        if not created:
+        if not created and not record.check_out_time:
             record.check_out_time = current_time
             record.save()
 
@@ -598,6 +614,11 @@ class UserCreateView(TemplateView):
             contact_number = request.POST.get('contact_number', '')
             email = request.POST.get('email', '')
             address = request.POST.get('address', '')
+            
+            gender = request.POST.get('gender', 'Male')
+            educational_qualifications = request.POST.get('educational_qualifications')
+            languages_known = request.POST.get('languages_known')
+            proficiency_level = request.POST.get('proficiency_level')
 
             # Read toggles
             global_telemetry = request.POST.get('global_telemetry') == 'true'
@@ -641,6 +662,10 @@ class UserCreateView(TemplateView):
                 contact_number=contact_number,
                 email=email,
                 address=address,
+                gender=gender,
+                educational_qualifications=educational_qualifications,
+                languages_known=languages_known,
+                proficiency_level=proficiency_level,
                 global_telemetry=global_telemetry,
                 ledger_override=ledger_override,
                 api_key_gen=api_key_gen,
@@ -658,25 +683,44 @@ class UserCreateView(TemplateView):
                 can_access_pos=request.POST.get('can_access_pos') == 'true' if 'can_access_pos' in request.POST else is_senior,
                 can_access_procurement=request.POST.get('can_access_procurement') == 'true' if 'can_access_procurement' in request.POST else is_senior,
             )
+            
+            if user.gender == 'Female':
+                from .models import CalendarEvent, LeaveRequest
+                female_holidays = CalendarEvent.objects.filter(is_female_holiday=True)
+                for fh in female_holidays:
+                    LeaveRequest.objects.get_or_create(
+                        employee_name=user.full_name,
+                        leave_type='Casual',
+                        start_date=fh.date,
+                        end_date=fh.date,
+                        defaults={
+                            'reason': f'Female Holiday: {fh.title}',
+                            'status': 'Approved'
+                        }
+                    )
+            
             return redirect(f'/users/create/?uid={user.uid}')
 
         elif action == 'update':
+            import os
+            from django.conf import settings
+            from django.core.files.storage import FileSystemStorage
+            uid = request.POST.get('uid')
             user = SystemUserProfile.objects.filter(uid=uid).first()
             if user:
+                old_name = user.full_name
                 user.full_name = request.POST.get('full_name', user.full_name)
                 user.position = request.POST.get('position', user.position)
                 user.node = request.POST.get('node', user.node)
                 
-                password = request.POST.get('password')
+                password = request.POST.get('password', '').strip()
                 if password:
                     user.password = password
-                
-                # File Upload Handling for Update
+                    
                 profile_image_file = request.FILES.get('profile_image_file')
                 if profile_image_file:
-                    from django.core.files.storage import FileSystemStorage
-                    fs = FileSystemStorage()
-                    filename = fs.save('avatars/' + profile_image_file.name, profile_image_file)
+                    fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'profiles'))
+                    filename = fs.save(profile_image_file.name, profile_image_file)
                     user.profile_image = fs.url(filename)
                 else:
                     user.profile_image = request.POST.get('profile_image', user.profile_image)
@@ -686,6 +730,11 @@ class UserCreateView(TemplateView):
                 user.contact_number = request.POST.get('contact_number', user.contact_number)
                 user.email = request.POST.get('email', user.email)
                 user.address = request.POST.get('address', user.address)
+                
+                user.gender = request.POST.get('gender', user.gender)
+                user.educational_qualifications = request.POST.get('educational_qualifications', user.educational_qualifications)
+                user.languages_known = request.POST.get('languages_known', user.languages_known)
+                user.proficiency_level = request.POST.get('proficiency_level', user.proficiency_level)
                 
                 # Update permissions
                 user.global_telemetry = request.POST.get('global_telemetry') == 'true'
@@ -720,6 +769,30 @@ class UserCreateView(TemplateView):
                         user.can_access_procurement = request.POST.get('can_access_procurement') == 'true'
                 
                 user.save()
+                
+                if user.gender == 'Female':
+                    from .models import CalendarEvent, LeaveRequest
+                    female_holidays = CalendarEvent.objects.filter(is_female_holiday=True)
+                    for fh in female_holidays:
+                        LeaveRequest.objects.get_or_create(
+                            employee_name=user.full_name,
+                            leave_type='Casual',
+                            start_date=fh.date,
+                            end_date=fh.date,
+                            defaults={
+                                'reason': f'Female Holiday: {fh.title}',
+                                'status': 'Approved'
+                            }
+                        )
+                
+                if request.session.get('logged_in_uid') == str(user.uid) or request.session.get('logged_in_name') == old_name:
+                    request.session['logged_in_name'] = user.full_name
+                    request.session['active_role'] = user.position
+                    
+                if old_name != user.full_name:
+                    AttendanceRecord.objects.filter(employee_name=old_name).update(employee_name=user.full_name)
+                    LeaveRequest.objects.filter(employee_name=old_name).update(employee_name=user.full_name)
+                    
             return redirect(f'/users/create/?uid={uid}')
 
         elif action == 'delete':
@@ -1054,8 +1127,19 @@ class ProcurementView(View):
             title = request.POST.get('title')
             track = request.POST.get('track', 'Local')
             supporting_document = request.FILES.get('supporting_document')
+            landing_cost_management = request.POST.get('landing_cost_management', '0.00')
+            goods_receive_notes = request.POST.get('goods_receive_notes')
             if title:
-                ProcurementRequest.objects.create(title=title, track=track, supporting_document=supporting_document)
+                lcm = 0.00
+                if landing_cost_management:
+                    try:
+                        lcm = float(landing_cost_management)
+                    except ValueError:
+                        pass
+                ProcurementRequest.objects.create(
+                    title=title, track=track, supporting_document=supporting_document,
+                    landing_cost_management=lcm, goods_receive_notes=goods_receive_notes
+                )
         
         elif action == 'approve':
             role = request.POST.get('role')

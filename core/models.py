@@ -99,6 +99,10 @@ class ProcurementRequest(models.Model):
     track = models.CharField(max_length=20, choices=TRACK_CHOICES)
     supporting_document = models.FileField(upload_to='procurement_docs/', null=True, blank=True)
     
+    # New Fields
+    landing_cost_management = models.DecimalField(max_digits=12, decimal_places=2, default=0.0)
+    goods_receive_notes = models.CharField(max_length=255, blank=True, null=True)
+    
     # Signatures
     cto_approved = models.BooleanField(default=False)
     hr_approved = models.BooleanField(default=False)
@@ -111,6 +115,7 @@ class CalendarEvent(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     date = models.DateField()
+    is_female_holiday = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -179,6 +184,17 @@ class SystemUserProfile(models.Model):
     contact_number = models.CharField(max_length=50, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     address = models.CharField(max_length=255, blank=True, null=True)
+    
+    # New Fields
+    GENDER_CHOICES = [
+        ('Male', 'Male'),
+        ('Female', 'Female'),
+        ('Other', 'Other'),
+    ]
+    gender = models.CharField(max_length=20, choices=GENDER_CHOICES, default='Male')
+    educational_qualifications = models.TextField(blank=True, null=True)
+    languages_known = models.CharField(max_length=255, blank=True, null=True)
+    proficiency_level = models.CharField(max_length=50, blank=True, null=True)
     
     # Permissions
     global_telemetry = models.BooleanField(default=False)

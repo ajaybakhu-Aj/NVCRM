@@ -234,6 +234,16 @@
 </div>
 <div class="flex items-center gap-3 md:gap-6">
 <div class="relative group">
+<button class="flex items-center gap-2 bg-surface-container px-3 py-1.5 rounded border border-outline-variant hover:bg-surface-variant transition-all cursor-pointer" onclick="document.getElementById('export-menu').classList.toggle('hidden')">
+<span class="material-symbols-outlined text-[20px]">download</span>
+<span class="font-label-bold text-label-bold hidden md:inline">Export</span>
+</button>
+<div id="export-menu" class="hidden absolute top-full right-0 mt-2 w-48 bg-surface-container-high border border-outline-variant rounded-lg shadow-xl overflow-hidden z-50">
+<button onclick="exportToCSV()" class="w-full text-left px-4 py-3 hover:bg-surface-variant text-sm flex items-center gap-2 text-on-surface"><span class="material-symbols-outlined text-success">table</span> Export to Excel</button>
+<button onclick="window.print()" class="w-full text-left px-4 py-3 hover:bg-surface-variant text-sm flex items-center gap-2 text-on-surface"><span class="material-symbols-outlined text-error">picture_as_pdf</span> Export to PDF</button>
+</div>
+</div>
+<div class="relative group">
 <a href="{% url 'procurement_list' %}" class="flex items-center gap-2 bg-surface-container px-3 py-1.5 rounded border border-outline-variant hover:bg-surface-variant transition-all cursor-pointer">
 <span class="material-symbols-outlined text-[20px]">fact_check</span>
 <span class="font-label-bold text-label-bold">Approvals</span>
@@ -513,6 +523,37 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('notified_ids', JSON.stringify(currentNoteIDs));
     localStorage.setItem('pending_count', pendingApprovalsCount.toString());
 });
+
+function exportToCSV() {
+    let tables = document.querySelectorAll('table');
+    if (tables.length === 0) {
+        alert("No tabular data found on this page to export.");
+        return;
+    }
+    
+    let csv = [];
+    for (let i = 0; i < tables.length; i++) {
+        let rows = tables[i].querySelectorAll('tr');
+        for (let j = 0; j < rows.length; j++) {
+            let row = [], cols = rows[j].querySelectorAll('td, th');
+            for (let k = 0; k < cols.length; k++) {
+                let text = cols[k].innerText.replace(/"/g, '""').replace(/\n/g, ' ');
+                row.push('"' + text + '"');
+            }
+            csv.push(row.join(','));
+        }
+        csv.push(""); // empty line between tables
+    }
+    
+    let csvString = csv.join('\n');
+    let a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvString);
+    a.target = '_blank';
+    a.download = 'export_' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
 </script>
 
 {% block scripts %}{% endblock scripts %}
