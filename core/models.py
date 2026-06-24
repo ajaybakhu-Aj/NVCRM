@@ -121,12 +121,32 @@ class CalendarEvent(models.Model):
     def __str__(self):
         return f"{self.title} on {self.date}"
 
+class SystemLog(models.Model):
+    user_name = models.CharField(max_length=255)
+    action = models.CharField(max_length=255)
+    details = models.TextField(blank=True, null=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user_name} - {self.action} at {self.timestamp}"
+
+class LeaveSettings(models.Model):
+    casual_leave_days = models.IntegerField(default=8)
+    sick_leave_days = models.IntegerField(default=12)
+    annual_leave_days = models.IntegerField(default=15)
+    maternity_leave_days = models.IntegerField(default=98)
+    paternity_leave_days = models.IntegerField(default=15)
+
+    def __str__(self):
+        return "Global Leave Settings"
+
 class LeaveRequest(models.Model):
     LEAVE_TYPES = [
         ('Casual', 'Casual Leave'),
         ('Sick', 'Sick Leave'),
         ('Annual', 'Annual Leave'),
-        ('Maternity', 'Maternity/Paternity Leave'),
+        ('Maternity', 'Maternity Leave'),
+        ('Paternity', 'Paternity Leave'),
     ]
     STATUS_CHOICES = [
         ('Pending', 'Pending'),

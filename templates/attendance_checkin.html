@@ -2,6 +2,7 @@
 
 {% block head %}
 <!-- Leaflet CSS -->
+<link href="https://nepalidatepicker.sajanmaharjan.com.np/v5/nepali.datepicker/css/nepali.datepicker.v5.0.6.min.css" rel="stylesheet" type="text/css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -175,15 +176,23 @@
 <div class="bg-surface-container border border-outline-variant rounded-xl p-6 mb-8">
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b border-outline-variant pb-6">
         <div>
-            <h4 class="font-headline-sm text-headline-sm text-on-surface uppercase tracking-wider font-semibold">Monthly Attendance Calendar</h4>
+            <h4 class="font-headline-sm text-headline-sm text-on-surface uppercase tracking-wider font-semibold">Monthly Attendance Calendar (Nepali)</h4>
             <p class="text-on-surface-variant text-body-md mt-1">Review check-in/out stamps, presence metrics, and log details.</p>
         </div>
         
-        <!-- Month navigation -->
-        <div class="flex items-center gap-4 bg-surface-container-lowest border border-outline-variant px-4 py-2 rounded-lg">
-            <a href="?year={{ prev_year }}&month={{ prev_month }}" class="material-symbols-outlined text-on-surface hover:text-primary transition-colors text-sm">chevron_left</a>
-            <span class="font-semibold text-on-surface uppercase tracking-wider text-xs font-data-mono">{{ month_name }} {{ year }}</span>
-            <a href="?year={{ next_year }}&month={{ next_month }}" class="material-symbols-outlined text-on-surface hover:text-primary transition-colors text-sm">chevron_right</a>
+        <!-- Month navigation & Filter -->
+        <div class="flex flex-col md:flex-row items-end md:items-center gap-4">
+            <!-- Nepali Date Picker Filter -->
+            <div class="relative w-48 z-40">
+                <input type="text" id="nepali-datepicker" placeholder="Jump to Nepali Date" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 pr-10 rounded-lg focus:outline-none focus:border-primary-fixed cursor-text text-xs font-data-mono">
+                <span onclick="document.getElementById('nepali-datepicker').focus()" class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant cursor-pointer hover:text-primary text-sm">calendar_month</span>
+            </div>
+
+            <div class="flex items-center gap-4 bg-surface-container-lowest border border-outline-variant px-4 py-2 rounded-lg">
+                <a href="?year={{ prev_year }}&month={{ prev_month }}" class="material-symbols-outlined text-on-surface hover:text-primary transition-colors text-sm">chevron_left</a>
+                <span class="font-semibold text-on-surface uppercase tracking-wider text-xs font-data-mono">{{ month_name }} {{ year }}</span>
+                <a href="?year={{ next_year }}&month={{ next_month }}" class="material-symbols-outlined text-on-surface hover:text-primary transition-colors text-sm">chevron_right</a>
+            </div>
         </div>
     </div>
     
@@ -544,5 +553,19 @@
     if (checkInBtn && !checkInBtn.hasAttribute('onclick')) {
         checkInBtn.addEventListener('click', processCheckInOut);
     }
+</script>
+
+<script src="https://nepalidatepicker.sajanmaharjan.com.np/v5/nepali.datepicker/js/nepali.datepicker.v5.0.6.min.js" type="text/javascript"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var mainInput = document.getElementById("nepali-datepicker");
+        if(mainInput) {
+            mainInput.NepaliDatePicker({
+                ndpYear: true,
+                ndpMonth: true,
+                ndpYearCount: 20
+            });
+        }
+    });
 </script>
 {% endblock scripts %}

@@ -200,6 +200,9 @@
 <a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant font-body-md text-body-md hover:bg-surface-variant transition-colors" href="{% url 'attendance_payroll_report' %}">
 <span class="material-symbols-outlined">request_quote</span> Payroll Report
 </a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant font-body-md text-body-md hover:bg-surface-variant transition-colors" href="{% url 'system_log' %}">
+<span class="material-symbols-outlined">history</span> System Log
+</a>
 {% endif %}
 <a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant font-body-md text-body-md hover:bg-surface-variant transition-colors" href="{% url 'task_board' %}">
 <span class="material-symbols-outlined">view_kanban</span> Task Board
@@ -554,6 +557,44 @@ function exportToCSV() {
     a.click();
     document.body.removeChild(a);
 }
+</script>
+
+<script>
+// Native Browser Notification Polling for Notice Board
+document.addEventListener('DOMContentLoaded', function() {
+    // Request permission if not already granted or denied
+    if ("Notification" in window) {
+        if (Notification.permission === "default") {
+            Notification.requestPermission();
+        }
+    }
+
+    // Initialize lastCheck to current time (so we only get new notices during this session)
+    let lastCheck = new Date().toISOString();
+
+    function pollNotices() {
+        if ("Notification" in window && Notification.permission === "granted") {
+            fetch(`/api/poll-notices/?last_check=${encodeURIComponent(lastCheck)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.notices && data.notices.length > 0) {
+                        data.notices.forEach(notice => {
+                            new Notification("New Notice: " + notice.title, {
+                                body: notice.author + " posted: " + notice.content,
+                                icon: "https://cdn-icons-png.flaticon.com/512/3239/3239045.png" // Notice Icon
+                            });
+                        });
+                        // Update lastCheck to current time
+                        lastCheck = new Date().toISOString();
+                    }
+                })
+                .catch(err => console.error("Error polling notices:", err));
+        }
+    }
+
+    // Poll every 10 seconds
+    setInterval(pollNotices, 10000);
+});
 </script>
 
 {% block scripts %}{% endblock scripts %}

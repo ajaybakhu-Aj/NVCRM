@@ -1,7 +1,8 @@
 from django.urls import path
-from .views import DashboardView, AttendanceCheckinView, InventoryListView, UserCreateView, NoticeBoardView, LeaveListView, LeadPipelineView, ProcurementView, AccountsReceivableView, SwitchRoleView, LoginView, LogoutView, POSView, POSCheckoutView, POSInvoiceView, StaffPayrollReportView, ProjectTaskBoardView
+from .views import DashboardView, AttendanceCheckinView, InventoryListView, UserCreateView, NoticeBoardView, LeaveListView, LeadPipelineView, ProcurementView, AccountsReceivableView, SwitchRoleView, LoginView, LogoutView, POSView, POSCheckoutView, POSInvoiceView, StaffPayrollReportView, ProjectTaskBoardView, SystemLogView, NoticePollView
 
 urlpatterns = [
+    path('system-log/', SystemLogView.as_view(), name='system_log'),
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('pos/', POSView.as_view(), name='pos'),
@@ -19,4 +20,5 @@ urlpatterns = [
     path('switch-role/', SwitchRoleView.as_view(), name='switch_role'),
     path('attendance-payroll-report/', StaffPayrollReportView.as_view(), name='attendance_payroll_report'),
     path('task-board/', ProjectTaskBoardView.as_view(), name='task_board'),
+    path('api/poll-notices/', NoticePollView.as_view(), name='poll_notices'),
 ]

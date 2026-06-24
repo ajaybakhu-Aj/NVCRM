@@ -235,11 +235,22 @@ class AttendanceCheckinView(TemplateView):
     template_name = "attendance_checkin.html"
 
     def get(self, request, *args, **kwargs):
+        import nepali_datetime
+        from .nepali_calendar import get_nepali_monthdatescalendar
+        
         # Pre-populate simulated attendance history for the user for the current month if empty
         logged_in_name = request.session.get('logged_in_name', 'John Doe')
         today = date.today()
-        year = int(request.GET.get('year', today.year))
-        month = int(request.GET.get('month', today.month))
+        today_np = nepali_datetime.date.today()
+        year = int(request.GET.get('year', today_np.year))
+        month = int(request.GET.get('month', today_np.month))
+
+        if month < 1:
+            month = 12
+            year -= 1
+        elif month > 12:
+            month = 1
+            year += 1
 
         if not AttendanceRecord.objects.filter(employee_name=logged_in_name).exists():
             # Populate some days in June 2026 (or current month)
@@ -276,73 +287,77 @@ class AttendanceCheckinView(TemplateView):
                         )
 
         # Generate month grid
-        cal = calendar.Calendar(firstweekday=6) # starts on Sunday
-        month_days = list(cal.itermonthdays2(year, month))
+        weeks = get_nepali_monthdatescalendar(year, month)
+        
+        start_date = weeks[0][0]
+        end_date = weeks[-1][-1]
 
         # Fetch records for selected month
         records = AttendanceRecord.objects.filter(
             employee_name=logged_in_name,
-            date__year=year,
-            date__month=month
+            date__range=(start_date, end_date)
         )
-        records_by_day = {r.date.day: r for r in records}
+        records_by_date = {r.date: r for r in records}
 
         # Calculate statistics
-        total_present = records.filter(status='Present').count()
-        total_late = records.filter(status='Late').count()
-        total_leave = records.filter(status='Leave').count()
-        total_absent = records.filter(status='Absent').count()
+        # Only count for days strictly in the selected nepali month
+        monthly_records = []
+        for w in weeks:
+            for d in w:
+                day_np = nepali_datetime.date.from_datetime_date(d)
+                if day_np.month == month and d in records_by_date:
+                    monthly_records.append(records_by_date[d])
+
+        total_present = sum(1 for r in monthly_records if r.status == 'Present')
+        total_late = sum(1 for r in monthly_records if r.status == 'Late')
+        total_leave = sum(1 for r in monthly_records if r.status == 'Leave')
+        total_absent = sum(1 for r in monthly_records if r.status == 'Absent')
 
         # Build grid list
         formatted_weeks = []
-        current_week = []
-        for day, col in month_days:
-            if day == 0:
-                current_week.append({
-                    'day': '',
-                    'record': None,
-                    'is_today': False,
-                    'is_weekend': False
-                })
-            else:
-                day_date = date(year, month, day)
-                is_weekend = col == 5 # Saturday=5 only
-                record = records_by_day.get(day)
-                is_today = (day_date == today)
+        for week in weeks:
+            current_week = []
+            for col, day_date in enumerate(week):
+                day_np = nepali_datetime.date.from_datetime_date(day_date)
+                is_current_month = (day_np.month == month)
+                
+                if not is_current_month:
+                    current_week.append({
+                        'day': '',
+                        'record': None,
+                        'is_today': False,
+                        'is_weekend': False
+                    })
+                else:
+                    is_weekend = col == 6 # Saturday=6 for start Sunday? Wait, get_nepali_monthdatescalendar returns Sunday first usually.
+                    # Let's check: weekday() usually has 0=Monday, 6=Sunday. In our grid Saturday is weekend.
+                    is_weekend = (day_date.weekday() == 5)
+                    record = records_by_date.get(day_date)
+                    is_today = (day_date == today)
 
-                current_week.append({
-                    'day': day,
-                    'record': record,
-                    'is_today': is_today,
-                    'is_weekend': is_weekend
-                })
-
-            if len(current_week) == 7:
-                formatted_weeks.append(current_week)
-                current_week = []
-        if current_week:
-            while len(current_week) < 7:
-                current_week.append({
-                    'day': '',
-                    'record': None,
-                    'is_today': False,
-                    'is_weekend': False
-                })
+                    current_week.append({
+                        'day': day_np.day,
+                        'record': record,
+                        'is_today': is_today,
+                        'is_weekend': is_weekend
+                    })
             formatted_weeks.append(current_week)
 
         # Date Nav variables
-        month_name = calendar.month_name[month]
+        np_months = ["Baisakh", "Jestha", "Ashadh", "Shrawan", "Bhadra", "Ashwin", "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra"]
+        month_name = np_months[month - 1]
+        
         prev_month = month - 1
         prev_year = year
-        if prev_month == 0:
+        if prev_month < 1:
             prev_month = 12
             prev_year -= 1
 
         next_month = month + 1
         next_year = year
-        if next_month == 13:
+        if next_month > 12:
             next_month = 1
-            next_year -= 1
+            next_year += 1
 
         active_role = request.session.get('active_role', '')
         is_remote_allowed = active_role.upper() in ['SALES', 'IT', 'IT TEAM']
@@ -877,12 +892,15 @@ class LeaveListView(TemplateView):
 
         requests_list = LeaveRequest.objects.all().order_by('-created_at')
 
-        # Allowances
+        # Allowances from DB
+        from .models import LeaveSettings
+        settings, created = LeaveSettings.objects.get_or_create(id=1)
         allowances = {
-            'Casual': 8,
-            'Sick': 12,
-            'Annual': 15,
-            'Maternity': 30
+            'Casual': settings.casual_leave_days,
+            'Sick': settings.sick_leave_days,
+            'Annual': settings.annual_leave_days,
+            'Maternity': settings.maternity_leave_days,
+            'Paternity': settings.paternity_leave_days
         }
         
         # Calculate used days for approved leaves for John Doe (current operator)
@@ -912,7 +930,8 @@ class LeaveListView(TemplateView):
             'leave_requests': requests_list,
             'balances': balances,
             'leave_types': LeaveRequest.LEAVE_TYPES,
-            'can_approve': can_approve
+            'can_approve': can_approve,
+            'leave_settings': settings
         }
         return render(request, self.template_name, context)
 
@@ -920,9 +939,31 @@ class LeaveListView(TemplateView):
         action = request.POST.get('action')
         request_id = request.POST.get('request_id')
 
+        if action == 'update_settings':
+            active_role = request.session.get('active_role', '')
+            user_name = request.session.get('logged_in_name', 'Unknown User')
+            if active_role.upper() in ['COO', 'HR', 'OPERATION HEAD', 'HR AND OPERATION HEAD', 'CEO', 'ADMIN', 'SYSTEM ADMIN', 'CITO']:
+                from .models import LeaveSettings, SystemLog
+                settings, _ = LeaveSettings.objects.get_or_create(id=1)
+                try:
+                    settings.casual_leave_days = int(request.POST.get('casual_leave_days', settings.casual_leave_days))
+                    settings.sick_leave_days = int(request.POST.get('sick_leave_days', settings.sick_leave_days))
+                    settings.annual_leave_days = int(request.POST.get('annual_leave_days', settings.annual_leave_days))
+                    settings.maternity_leave_days = int(request.POST.get('maternity_leave_days', settings.maternity_leave_days))
+                    settings.paternity_leave_days = int(request.POST.get('paternity_leave_days', settings.paternity_leave_days))
+                    settings.save()
+                    messages.success(request, "Global Leave Allowances updated successfully.")
+                except ValueError:
+                    messages.error(request, "Invalid input for leave allowances.")
+            else:
+                messages.error(request, "Access Denied: You do not have permission to edit leave settings.")
+            return redirect('leave_list')
+
         if action in ['approve', 'reject'] and request_id:
             active_role = request.session.get('active_role', '')
+            user_name = request.session.get('logged_in_name', 'Unknown User')
             if active_role.upper() in ['COO', 'HR', 'OPERATION HEAD', 'HR AND OPERATION HEAD', 'CEO', 'ADMIN', 'SYSTEM ADMIN', 'CITO']:
+                from .models import LeaveRequest, SystemLog
                 try:
                     req = LeaveRequest.objects.get(id=request_id)
                     req.status = 'Approved' if action == 'approve' else 'Rejected'
@@ -952,8 +993,10 @@ class LeaveListView(TemplateView):
                         status='Pending'
                     )
                     messages.success(request, f"Leave requested! Notification & Email sent to COO, HR, and Operation Head.")
-                except ValueError:
-                    pass
+                except Exception as e:
+                    messages.error(request, f"Failed to create leave request: {str(e)} (Dates must be YYYY-MM-DD)")
+            else:
+                messages.error(request, "Please fill out all required fields.")
 
         return redirect('leave_list')
 
@@ -1500,6 +1543,8 @@ class StaffPayrollReportView(TemplateView):
     def get(self, request, *args, **kwargs):
         from django.core.exceptions import PermissionDenied
         from .models import EmployeeProfile, AttendanceRecord, SystemUserProfile
+        import csv
+        from django.http import HttpResponse
         
         active_role = request.session.get('active_role', '').upper()
         allowed_roles = ['CEO', 'COO', 'HR', 'OPERATION HEAD', 'HR AND OPERATION HEAD', 'CITO', 'ADMIN']
@@ -1550,6 +1595,7 @@ class StaffPayrollReportView(TemplateView):
                 'hourly_rate': round(hourly_rate, 2),
                 'total_pay': round(total_pay, 2),
                 'base_salary': round(base_salary, 2),
+                'records': emp_records.order_by('date')
             })
             
         # Additional default stats for John Doe if the users table doesn't match him
@@ -1575,13 +1621,91 @@ class StaffPayrollReportView(TemplateView):
                     'hourly_rate': round(hourly_rate, 2),
                     'total_pay': round(john_hours * hourly_rate, 2),
                     'base_salary': 50000.0,
+                    'records': john_records.order_by('date')
                 })
 
+        export_user = request.GET.get('export_user')
+        if export_user:
+            employee_data = None
+            for row in payroll_data:
+                if row['employee_name'] == export_user:
+                    employee_data = row
+                    break
+                    
+            if employee_data:
+                from .models import SystemLog
+                SystemLog.objects.create(
+                    user_name=request.session.get('logged_in_name', 'Unknown'),
+                    action="Generated Individual PDF Payslip",
+                    details=f"Generated printable PDF payslip for {export_user}."
+                )
+                from django.utils import timezone
+                return render(request, 'payslip_print.html', {
+                    'employee_data': employee_data,
+                    'now': timezone.now()
+                })
+
+        from django.core.paginator import Paginator
+        paginator = Paginator(attendance_records, 25)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+
         context = {
-            'attendance_records': attendance_records,
+            'attendance_records': page_obj,
             'payroll_data': payroll_data
         }
         return render(request, self.template_name, context)
+
+    def post(self, request, *args, **kwargs):
+        from .models import EmployeeProfile, SystemUserProfile, OrgNode
+        active_role = request.session.get('active_role', '').upper()
+        allowed_roles = ['CEO', 'COO', 'HR', 'OPERATION HEAD', 'HR AND OPERATION HEAD']
+        
+        if active_role not in allowed_roles:
+            messages.error(request, "Access Denied: You do not have permission to edit payroll.")
+            return redirect('attendance_payroll_report')
+            
+        action = request.POST.get('action')
+        if action == 'update_salary':
+            employee_name = request.POST.get('employee_name')
+            new_salary = request.POST.get('new_salary')
+            
+            try:
+                new_salary = float(new_salary)
+                first_name = employee_name.split(' ')[0]
+                emp = EmployeeProfile.objects.filter(first_name__icontains=first_name).first()
+                if emp:
+                    emp.base_gross_salary = new_salary
+                    emp.save()
+                else:
+                    # Create one if doesn't exist to bind the salary
+                    default_node = OrgNode.objects.first()
+                    parts = employee_name.split(' ', 1)
+                    last_name = parts[1] if len(parts) > 1 else ''
+                    EmployeeProfile.objects.create(
+                        first_name=first_name,
+                        last_name=last_name,
+                        node=default_node,
+                        base_gross_salary=new_salary
+                    )
+                messages.success(request, f"Salary for {employee_name} updated successfully to NPR {new_salary:,.2f}.")
+            except ValueError:
+                messages.error(request, "Invalid salary amount provided.")
+                
+        return redirect('attendance_payroll_report')
+
+class SystemLogView(TemplateView):
+    template_name = "system_log.html"
+
+    def get(self, request, *args, **kwargs):
+        active_role = request.session.get('active_role', '')
+        if active_role.upper() not in ['COO', 'HR', 'OPERATION HEAD', 'HR AND OPERATION HEAD', 'CEO', 'ADMIN', 'SYSTEM ADMIN', 'CITO']:
+            messages.error(request, "Access Denied: You do not have permission to view System Logs.")
+            return redirect('dashboard')
+            
+        from .models import SystemLog
+        logs = SystemLog.objects.all().order_by('-timestamp')
+        return render(request, self.template_name, {'logs': logs})
 
 class ProjectTaskBoardView(TemplateView):
     template_name = "task_board.html"
@@ -1690,3 +1814,31 @@ class ProjectTaskBoardView(TemplateView):
                     return JsonResponse({'success': True})
                     
         return redirect('task_board')
+
+from django.http import JsonResponse
+
+class NoticePollView(View):
+    def get(self, request):
+        last_check_str = request.GET.get('last_check')
+        if not last_check_str:
+            return JsonResponse({'notices': []})
+            
+        try:
+            # Handle standard ISO format from JS
+            last_check = datetime.fromisoformat(last_check_str.replace('Z', '+00:00'))
+        except Exception:
+            return JsonResponse({'notices': []})
+            
+        # Get notices created AFTER the last_check time
+        new_notices = Notice.objects.filter(created_at__gt=last_check).order_by('created_at')
+        
+        data = []
+        for n in new_notices:
+            data.append({
+                'title': n.title,
+                'author': n.author_name,
+                'priority': n.priority,
+                'content': n.content[:100] + '...' if len(n.content) > 100 else n.content
+            })
+            
+        return JsonResponse({'notices': data})

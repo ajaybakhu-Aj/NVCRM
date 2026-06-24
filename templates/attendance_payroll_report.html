@@ -7,16 +7,31 @@
         <h3 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Executive Payroll & Attendance</h3>
         <p class="text-on-surface-variant font-body-md mt-1">Classified Workforce Telemetry & Compensation Report</p>
     </div>
-    <div class="flex items-center gap-3">
-        <button onclick="window.print()" class="flex items-center gap-2 bg-surface-container border border-outline-variant hover:bg-surface-variant transition-colors text-on-surface px-4 py-2 rounded-lg font-label-bold text-xs uppercase tracking-widest shadow-sm">
+    <div class="flex items-center gap-4">
+        <form method="GET" action="" target="_blank" class="flex items-center bg-surface border border-outline focus-within:border-primary focus-within:ring-1 focus-within:ring-primary rounded-xl overflow-hidden shadow-md transition-all group">
+            <div class="flex items-center pl-4 pr-2 bg-surface-container-low border-r border-outline-variant h-full text-on-surface-variant group-focus-within:text-primary transition-colors">
+                <span class="material-symbols-outlined text-[18px]">person_search</span>
+            </div>
+            <select name="export_user" required class="bg-transparent border-none text-sm text-on-surface font-semibold focus:ring-0 outline-none cursor-pointer py-2.5 pl-3 pr-10 appearance-none min-w-[200px]">
+                <option value="" disabled selected class="bg-[#121212] text-white">Select Employee for CSV</option>
+                {% for row in payroll_data %}
+                <option value="{{ row.employee_name }}" class="bg-[#121212] text-white">{{ row.employee_name }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="flex items-center gap-2 bg-primary text-on-primary hover:brightness-110 transition-all px-5 py-2.5 font-label-bold text-xs uppercase tracking-widest border-l border-primary/20 h-full">
+                <span class="material-symbols-outlined text-[16px]">download</span>
+                Export
+            </button>
+        </form>
+        <button onclick="window.print()" class="flex items-center gap-2 bg-surface-container border border-outline-variant hover:bg-surface-variant transition-colors text-on-surface px-5 py-2.5 rounded-xl font-label-bold text-xs uppercase tracking-widest shadow-sm h-full">
             <span class="material-symbols-outlined text-[18px]">print</span>
-            Export Ledger
+            Print PDF
         </button>
     </div>
 </div>
 
 <!-- Executive Overview Metrics -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 print:hidden">
     <div class="bg-surface-container border border-outline-variant rounded-xl p-6 relative overflow-hidden group">
         <div class="absolute top-0 right-0 -mr-4 -mt-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
             <span class="material-symbols-outlined" style="font-size: 120px;">group</span>
@@ -34,7 +49,7 @@
             <span class="material-symbols-outlined" style="font-size: 120px;">fact_check</span>
         </div>
         <p class="font-label-caps text-label-caps text-outline text-[10px] uppercase tracking-widest mb-1">Total Logs Processed</p>
-        <h2 class="font-headline-lg text-primary text-4xl tracking-tight">{{ attendance_records|length }}</h2>
+        <h2 class="font-headline-lg text-primary text-4xl tracking-tight">{{ attendance_records.paginator.count|default:attendance_records|length }}</h2>
         <div class="mt-4 flex items-center gap-2">
             <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
             <span class="text-[10px] text-on-surface-variant font-semibold uppercase tracking-wider">Live Sync</span>
@@ -55,7 +70,7 @@
 </div>
 
 <!-- Main Modules Container -->
-<div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-8 print:hidden">
     
     <!-- Left Column: Payroll Summary Table -->
     <section class="flex flex-col gap-4">
@@ -95,7 +110,14 @@
                             <td class="px-6 py-4 text-right">
                                 <div class="flex flex-col items-end">
                                     <span class="font-data-mono text-on-surface text-xs">NPR {{ pay.hourly_rate|floatformat:2 }}</span>
-                                    <span class="text-[9px] text-outline mt-0.5 border border-outline-variant rounded px-1">{{ pay.base_salary|floatformat:0 }} Base</span>
+                                    <div class="flex items-center gap-1 mt-0.5">
+                                        <span class="text-[9px] text-outline border border-outline-variant rounded px-1">{{ pay.base_salary|floatformat:0 }} Base</span>
+                                        {% if request.session.active_role == 'CEO' or request.session.active_role == 'COO' or request.session.active_role == 'HR' or request.session.active_role == 'OPERATION HEAD' or request.session.active_role == 'HR AND OPERATION HEAD' %}
+                                        <button onclick="openSalaryModal('{{ pay.employee_name|escapejs }}', '{{ pay.base_salary|floatformat:0 }}')" class="opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:bg-primary/10 rounded-full p-0.5">
+                                            <span class="material-symbols-outlined text-[10px]">edit</span>
+                                        </button>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </td>
                             <td class="px-6 py-4 text-right">
@@ -206,9 +228,129 @@
                     </tbody>
                 </table>
             </div>
+            {% if attendance_records.has_other_pages %}
+            <div class="bg-surface-container-low border-t border-outline-variant p-3 flex justify-between items-center shrink-0">
+                <span class="text-[10px] text-on-surface-variant font-label-caps uppercase tracking-widest">
+                    Page {{ attendance_records.number }} of {{ attendance_records.paginator.num_pages }}
+                </span>
+                <div class="flex items-center gap-2">
+                    {% if attendance_records.has_previous %}
+                    <a href="?page={{ attendance_records.previous_page_number }}" class="px-3 py-1 rounded bg-surface-variant hover:brightness-110 text-on-surface text-[10px] font-label-bold transition-colors">Previous</a>
+                    {% else %}
+                    <span class="px-3 py-1 rounded bg-surface-variant/50 text-on-surface/50 text-[10px] font-label-bold cursor-not-allowed">Previous</span>
+                    {% endif %}
+                    
+                    {% if attendance_records.has_next %}
+                    <a href="?page={{ attendance_records.next_page_number }}" class="px-3 py-1 rounded bg-primary-container text-on-primary-container hover:brightness-110 text-[10px] font-label-bold transition-colors">Next</a>
+                    {% else %}
+                    <span class="px-3 py-1 rounded bg-primary-container/50 text-on-primary-container/50 text-[10px] font-label-bold cursor-not-allowed">Next</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
         </div>
     </section>
 </div>
+
+<!-- Printable Detailed Report (Hidden by default, shown on print) -->
+<div class="hidden print:block printable-report mt-8">
+    <div class="mb-8 border-b-2 border-outline pb-4">
+        <h2 class="font-headline-lg text-2xl font-bold uppercase tracking-widest text-on-surface">Executive Payroll & Attendance Report</h2>
+        <p class="text-on-surface-variant font-body-md mt-1">Classified Workforce Telemetry & Compensation</p>
+    </div>
+
+    {% for row in payroll_data %}
+    <div class="mb-12 break-inside-avoid">
+        <div class="bg-surface-container-low border-2 border-outline p-4 rounded mb-4">
+            <h3 class="font-headline-md text-xl font-bold text-primary mb-2 uppercase">{{ row.employee_name }}</h3>
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div><strong>Position:</strong> {{ row.position }}</div>
+                <div><strong>Base Salary:</strong> NPR {{ row.base_salary|floatformat:2 }}</div>
+                <div><strong>Total Hours:</strong> {{ row.total_hours }}h</div>
+                <div><strong>Total Payout:</strong> NPR {{ row.total_pay|floatformat:2 }}</div>
+            </div>
+        </div>
+        
+        <table class="w-full text-left border-collapse text-xs border border-outline">
+            <thead class="bg-surface-container-highest border-b border-outline">
+                <tr>
+                    <th class="px-3 py-2 border-r border-outline font-bold uppercase">Date</th>
+                    <th class="px-3 py-2 border-r border-outline font-bold uppercase">Check In</th>
+                    <th class="px-3 py-2 border-r border-outline font-bold uppercase">Check Out</th>
+                    <th class="px-3 py-2 font-bold uppercase">Status</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-outline">
+                {% for rec in row.records %}
+                <tr>
+                    <td class="px-3 py-2 border-r border-outline">{{ rec.date|date:"Y-m-d" }}</td>
+                    <td class="px-3 py-2 border-r border-outline">{% if rec.check_in_time %}{{ rec.check_in_time|time:"H:i" }}{% else %}--:--{% endif %}</td>
+                    <td class="px-3 py-2 border-r border-outline">{% if rec.check_out_time %}{{ rec.check_out_time|time:"H:i" }}{% else %}--:--{% endif %}</td>
+                    <td class="px-3 py-2">
+                        <strong>{{ rec.status }}</strong>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="px-3 py-4 text-center italic opacity-70">No attendance records found for this period.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Salary Edit Modal -->
+<div id="salaryEditModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-background/80 backdrop-blur-sm">
+    <div class="bg-surface-container border border-outline-variant rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="font-headline-sm text-on-surface flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">edit_document</span>
+                Update Base Salary
+            </h3>
+            <button onclick="closeSalaryModal()" class="text-on-surface-variant hover:text-on-surface transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        
+        <form method="POST" action="">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_salary">
+            <input type="hidden" name="employee_name" id="modalEmployeeName">
+            
+            <div class="mb-4">
+                <label class="block font-label-md text-on-surface-variant mb-2">Employee Target</label>
+                <div class="w-full bg-surface-container-highest border border-outline-variant rounded-lg px-4 py-3 text-on-surface font-semibold" id="modalEmployeeNameDisplay"></div>
+            </div>
+            
+            <div class="mb-6">
+                <label class="block font-label-md text-on-surface-variant mb-2">New Base Gross Salary (NPR)</label>
+                <input type="number" step="0.01" name="new_salary" id="modalNewSalary" required class="w-full bg-surface border border-outline focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-4 py-3 text-on-surface transition-colors font-data-mono">
+            </div>
+            
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeSalaryModal()" class="px-5 py-2.5 rounded-lg border border-outline-variant text-on-surface hover:bg-surface-variant transition-colors font-label-bold text-sm">Cancel</button>
+                <button type="submit" class="px-5 py-2.5 rounded-lg bg-primary text-on-primary hover:brightness-110 transition-colors font-label-bold text-sm shadow-md">Apply Salary Update</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openSalaryModal(employeeName, currentSalary) {
+        document.getElementById('salaryEditModal').classList.remove('hidden');
+        document.getElementById('salaryEditModal').classList.add('flex');
+        document.getElementById('modalEmployeeName').value = employeeName;
+        document.getElementById('modalEmployeeNameDisplay').textContent = employeeName;
+        document.getElementById('modalNewSalary').value = currentSalary;
+    }
+    
+    function closeSalaryModal() {
+        document.getElementById('salaryEditModal').classList.add('hidden');
+        document.getElementById('salaryEditModal').classList.remove('flex');
+    }
+</script>
 
 <style>
     .custom-scrollbar::-webkit-scrollbar {

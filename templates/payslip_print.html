@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payroll Report - {{ employee_data.employee_name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { color-scheme: light !important; }
+        @page { size: A4; margin: 20mm; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #ffffff !important; 
+            color: #000000 !important; 
+        }
+        /* Aggressive overrides for Dark Reader extensions */
+        * {
+            background-color: transparent;
+        }
+        .force-bg-white { background-color: #ffffff !important; }
+        .force-bg-gray { background-color: #f9fafb !important; }
+        .force-text-black { color: #111827 !important; }
+        .force-text-gray { color: #4b5563 !important; }
+        .force-border { border-color: #e5e7eb !important; }
+        
+        .print-only { display: none; }
+        @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .print-only { display: block; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body class="p-8 max-w-4xl mx-auto force-bg-white force-text-black" onload="window.print()">
+    <div class="no-print mb-4 p-4 force-bg-gray force-text-black force-border rounded flex justify-between items-center border">
+        <span>Please use the browser's Print dialog to save this as a PDF.</span>
+        <button onclick="window.print()" class="bg-blue-600 text-white px-4 py-2 rounded" style="background-color: #2563eb !important; color: white !important;">Print / Save PDF</button>
+    </div>
+
+    <!-- Header -->
+    <div class="flex justify-between items-end border-b-2 force-border pb-4 mb-8">
+        <div>
+            <h1 class="text-3xl font-bold tracking-tight force-text-black">EXECUTIVE PAYROLL REPORT</h1>
+            <p class="text-sm force-text-gray mt-1">Official Compensation & Attendance Telemetry</p>
+        </div>
+        <div class="text-right">
+            <h2 class="text-xl font-bold force-text-black">{{ employee_data.employee_name }}</h2>
+            <p class="text-sm force-text-gray uppercase tracking-widest">{{ employee_data.position }}</p>
+        </div>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="grid grid-cols-2 gap-6 mb-8">
+        <div class="force-bg-gray p-4 rounded-lg border force-border">
+            <h3 class="text-xs font-bold force-text-gray uppercase tracking-widest mb-3">Workforce Telemetry</h3>
+            <div class="flex justify-between mb-2">
+                <span class="text-sm force-text-gray">Total Hours Worked:</span>
+                <span class="text-sm font-mono font-bold force-text-black">{{ employee_data.total_hours }}h</span>
+            </div>
+            <div class="flex justify-between mb-2">
+                <span class="text-sm force-text-gray">Days Logged:</span>
+                <span class="text-sm font-mono font-bold force-text-black">{{ employee_data.records|length }}</span>
+            </div>
+        </div>
+        
+        <div class="force-bg-gray p-4 rounded-lg border force-border">
+            <h3 class="text-xs font-bold force-text-gray uppercase tracking-widest mb-3">Compensation Details</h3>
+            <div class="flex justify-between mb-2">
+                <span class="text-sm force-text-gray">Base Salary:</span>
+                <span class="text-sm font-mono force-text-black">NPR {{ employee_data.base_salary|floatformat:2 }}</span>
+            </div>
+            <div class="flex justify-between mb-2">
+                <span class="text-sm force-text-gray">Calculated Hourly Rate:</span>
+                <span class="text-sm font-mono force-text-black">NPR {{ employee_data.hourly_rate|floatformat:2 }}</span>
+            </div>
+            <div class="flex justify-between mt-3 pt-3 border-t force-border">
+                <span class="text-sm font-bold force-text-black">Total Net Payout:</span>
+                <span class="text-base font-mono font-bold text-green-700" style="color: #15803d !important;">NPR {{ employee_data.total_pay|floatformat:2 }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attendance Ledger -->
+    <h3 class="text-sm font-bold force-text-black uppercase tracking-widest mb-4">Daily Attendance Chronology</h3>
+    <table class="w-full text-left border-collapse border force-border">
+        <thead>
+            <tr class="force-bg-gray border-y force-border text-xs force-text-gray uppercase tracking-widest">
+                <th class="py-2 px-4 font-semibold border-b force-border">Date</th>
+                <th class="py-2 px-4 font-semibold text-center border-b force-border">Check In</th>
+                <th class="py-2 px-4 font-semibold text-center border-b force-border">Check Out</th>
+                <th class="py-2 px-4 font-semibold text-right border-b force-border">Status</th>
+            </tr>
+        </thead>
+        <tbody class="text-sm force-text-black">
+            {% for rec in employee_data.records %}
+            <tr class="border-b force-border force-bg-white">
+                <td class="py-2 px-4 force-text-black">{{ rec.date|date:"Y-m-d" }}</td>
+                <td class="py-2 px-4 text-center font-mono force-text-gray">{{ rec.check_in_time|time:"H:i"|default:"--:--" }}</td>
+                <td class="py-2 px-4 text-center font-mono force-text-gray">{{ rec.check_out_time|time:"H:i"|default:"--:--" }}</td>
+                <td class="py-2 px-4 text-right">
+                    {% if rec.status == 'Present' %}
+                    <span class="font-semibold" style="color: #15803d !important;">{{ rec.status }}</span>
+                    {% elif rec.status == 'Late' %}
+                    <span class="font-semibold" style="color: #b45309 !important;">{{ rec.status }}</span>
+                    {% elif rec.status == 'Absent' %}
+                    <span class="font-semibold" style="color: #b91c1c !important;">{{ rec.status }}</span>
+                    {% else %}
+                    <span class="force-text-gray">{{ rec.status }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" class="py-8 text-center force-text-gray force-bg-white">No attendance records found for this period.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Footer -->
+    <div class="mt-12 text-center text-xs force-text-gray border-t force-border pt-4 force-bg-white">
+        <p>Generated by Nightvision ERP System • {{ now|date:"Y-m-d H:i" }}</p>
+        <p>This is a classified internal system document.</p>
+    </div>
+</body>
+</html>
