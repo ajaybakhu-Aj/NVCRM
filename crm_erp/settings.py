@@ -137,6 +137,9 @@ USE_I18N = True
 USE_TZ = True
 
 
+# Use Signed Cookies for Sessions so they persist across Vercel serverless functions
+SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
