@@ -215,16 +215,16 @@
 <div class="p-4 border-t border-outline-variant bg-surface-container-low">
     <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
-            {% if request.session.profile_image %}
-            <img src="{{ request.session.profile_image }}" class="w-10 h-10 rounded-full object-cover border border-outline-variant shadow-sm" alt="Profile Image">
+            {% if system_user.profile_image %}
+            <img src="{{ system_user.profile_image }}" class="w-10 h-10 rounded-full object-cover border border-outline-variant shadow-sm" alt="Profile Image">
             {% else %}
             <div class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold">
-                {{ request.session.logged_in_name|default:"G"|make_list|first|upper }}
+                {{ system_user.full_name|default:"G"|make_list|first|upper }}
             </div>
             {% endif %}
             <div>
-                <p class="font-label-bold text-label-bold text-on-surface">{{ request.session.logged_in_name|default:"Guest User" }}</p>
-                <p class="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">{{ request.session.active_role|default:"Unassigned" }}</p>
+                <p class="font-label-bold text-label-bold text-on-surface">{{ system_user.full_name|default:"Guest User" }}</p>
+                <p class="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">{{ system_user.position|default:"Unassigned" }}</p>
             </div>
         </div>
         <a href="{% url 'logout' %}" hx-boost="false" class="material-symbols-outlined text-outline hover:text-error transition-colors p-2" title="Logout">logout</a>
