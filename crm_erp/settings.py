@@ -92,7 +92,6 @@ if os.environ.get('VERCEL') == '1' or os.environ.get('VERCEL_URL'):
 else:
     DB_NAME = BASE_DIR / 'db.sqlite3'
 
-import dj_database_url
 import os
 
 DATABASES = {
@@ -101,10 +100,6 @@ DATABASES = {
         'NAME': DB_NAME,
     }
 }
-
-# Use external database if DATABASE_URL is provided (e.g. on Vercel PostgreSQL)
-if os.environ.get('DATABASE_URL'):
-    DATABASES['default'] = dj_database_url.config(default=os.environ.get('DATABASE_URL'), conn_max_age=600)
 
 
 # Password validation
