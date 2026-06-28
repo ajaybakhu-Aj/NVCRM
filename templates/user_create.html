@@ -181,20 +181,21 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div>
                                 <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Position / Role</label>
-                                <select name="position" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none cursor-pointer rounded" {% if active_role_upper != 'CEO' and active_role_upper != 'COO' and active_role_upper != 'HR AND OPERATION HEAD' %}disabled title="Only CEO, COO, or HR and Operation Head can change position."{% endif %}>
-                                    <option value="CEO" {% if selected_user.position == 'CEO' %}selected{% endif %}>CEO</option>
-                                    <option value="CITO" {% if selected_user.position == 'CITO' %}selected{% endif %}>CITO</option>
-                                    <option value="IT" {% if selected_user.position == 'IT' %}selected{% endif %}>IT</option>
-                                    <option value="COO" {% if selected_user.position == 'COO' %}selected{% endif %}>COO</option>
-                                    <option value="HR and Operation Head" {% if selected_user.position == 'HR and Operation Head' %}selected{% endif %}>HR and Operation Head</option>
-                                    <option value="Admin" {% if selected_user.position == 'Admin' %}selected{% endif %}>Admin</option>
-                                    <option value="CMO" {% if selected_user.position == 'CMO' %}selected{% endif %}>CMO</option>
-                                    <option value="CSO" {% if selected_user.position == 'CSO' %}selected{% endif %}>CSO</option>
-                                    <option value="CTO" {% if selected_user.position == 'CTO' %}selected{% endif %}>CTO</option>
-                                    <option value="Manager" {% if selected_user.position == 'Manager' %}selected{% endif %}>Manager</option>
-                                    <option value="Logistics Manager" {% if selected_user.position == 'Logistics Manager' %}selected{% endif %}>Logistics Manager</option>
-                                    <option value="Staff" {% if selected_user.position == 'Staff' %}selected{% endif %}>Staff</option>
-                                </select>
+                                <input type="text" name="position" value="{{ selected_user.position }}" list="position-list" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded" {% if active_role_upper != 'CEO' and active_role_upper != 'COO' and active_role_upper != 'HR AND OPERATION HEAD' %}readonly title="Only CEO, COO, or HR and Operation Head can change position."{% endif %}>
+                                <datalist id="position-list">
+                                    <option value="CEO">
+                                    <option value="CITO">
+                                    <option value="IT">
+                                    <option value="COO">
+                                    <option value="HR and Operation Head">
+                                    <option value="Admin">
+                                    <option value="CMO">
+                                    <option value="CSO">
+                                    <option value="CTO">
+                                    <option value="Manager">
+                                    <option value="Logistics Manager">
+                                    <option value="Staff">
+                                </datalist>
                             </div>
                             <div>
                                 <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">System Node</label>
@@ -721,20 +722,21 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Position / Role</label>
-                        <select name="position" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none cursor-pointer rounded" {% if active_role_upper != 'CEO' and active_role_upper != 'COO' and active_role_upper != 'HR AND OPERATION HEAD' %}disabled title="Only CEO, COO, or HR and Operation Head can assign position."{% endif %}>
-                            <option value="CEO">CEO</option>
-                            <option value="CITO">CITO</option>
-                            <option value="IT">IT</option>
-                            <option value="COO">COO</option>
-                            <option value="HR and Operation Head">HR and Operation Head</option>
-                            <option value="Admin">Admin</option>
-                            <option value="CMO">CMO</option>
-                            <option value="CSO">CSO</option>
-                            <option value="CTO">CTO</option>
-                            <option value="Manager">Manager</option>
-                            <option value="Logistics Manager">Logistics Manager</option>
-                            <option value="Staff">Staff</option>
-                        </select>
+                        <input type="text" name="position" list="position-list-create" placeholder="e.g. Graphic Designer" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded" {% if active_role_upper != 'CEO' and active_role_upper != 'COO' and active_role_upper != 'HR AND OPERATION HEAD' %}readonly title="Only CEO, COO, or HR and Operation Head can assign position."{% endif %} required>
+                        <datalist id="position-list-create">
+                            <option value="CEO">
+                            <option value="CITO">
+                            <option value="IT">
+                            <option value="COO">
+                            <option value="HR and Operation Head">
+                            <option value="Admin">
+                            <option value="CMO">
+                            <option value="CSO">
+                            <option value="CTO">
+                            <option value="Manager">
+                            <option value="Logistics Manager">
+                            <option value="Staff">
+                        </datalist>
                     </div>
                     <div>
                         <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">System Node</label>
