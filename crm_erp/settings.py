@@ -23,10 +23,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-)vqmtpj=@6y_elf92o$7r0d59#^z75zk($3+4)3q31_7i%!tv@'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['*']
-CSRF_TRUSTED_ORIGINS = ['https://hsor.ajaybakhunchhe.com.np', 'http://hsor.ajaybakhunchhe.com.np']
+CSRF_TRUSTED_ORIGINS = ['https://crm.nightvisioncctv.com', 'http://crm.nightvisioncctv.com', 'https://hsor.ajaybakhunchhe.com.np', 'http://hsor.ajaybakhunchhe.com.np']
 
 # Application definition
 
@@ -140,7 +140,7 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
 STATICFILES_DIRS = [
     BASE_DIR / "static",
@@ -148,5 +148,5 @@ STATICFILES_DIRS = [
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 WHITENOISE_USE_FINDERS = True
 
-MEDIA_URL = 'media/'
+MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'

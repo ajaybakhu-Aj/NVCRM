@@ -292,7 +292,13 @@
                                         <div class="text-[8px] font-data-mono text-on-surface-variant flex flex-col gap-0.5 leading-none">
                                             <span class="flex justify-between"><span>IN:</span> <span class="text-primary font-semibold">{{ cell.record.check_in_time|time:"h:i A" }}</span></span>
                                             {% if cell.record.check_out_time %}
-                                                <span class="flex justify-between"><span>OUT:</span> <span class="text-outline">{{ cell.record.check_out_time|time:"h:i A" }}</span></span>
+                                                <span class="flex justify-between">
+                                                    <span>OUT:</span> 
+                                                    <span class="text-outline">
+                                                        {{ cell.record.check_out_time|time:"h:i A" }}
+                                                        {% if cell.record.is_early_checkout %}<span class="text-error ml-1" title="Early Checkout">(Early)</span>{% endif %}
+                                                    </span>
+                                                </span>
                                             {% else %}
                                                 <span class="flex justify-between text-amber-300"><span>OUT:</span> <span>Active</span></span>
                                             {% endif %}

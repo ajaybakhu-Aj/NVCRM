@@ -658,6 +658,9 @@ class InventoryListView(TemplateView):
             product_image = request.FILES.get('product_image')
             
             node, _ = OrgNode.objects.get_or_create(name=location_name, defaults={'node_type': 'Warehouse'})
+            
+            if fresh_qty == 0 and dam_qty == 0 and refurb_qty == 0 and rep_qty == 0:
+                fresh_qty = 1
                 
             if fresh_qty > 0:
                 InventoryLedger.objects.create(
@@ -688,6 +691,51 @@ class InventoryListView(TemplateView):
             total_qty = fresh_qty + dam_qty + refurb_qty + rep_qty
             messages.success(request, f"Successfully added {total_qty} units of {product_name} to {location_name} inventory.")
             
+        elif action == 'bulk_import':
+            excel_file = request.FILES.get('excel_file')
+            if excel_file:
+                import openpyxl
+                try:
+                    wb = openpyxl.load_workbook(excel_file, data_only=True)
+                    ws = wb.active
+                    count = 0
+                    for row in ws.iter_rows(min_row=2, values_only=True):
+                        # Expected columns: SKU, Product Name, Category, UOM, Location, Price, Fresh, Damaged, Refurbished, Repairable
+                        if row[0] and row[1] and row[4] and row[5] is not None:
+                            sku_id = str(row[0])
+                            product_name = str(row[1])
+                            category = str(row[2]) if row[2] else 'Electronics'
+                            uom = str(row[3]) if row[3] else 'Pcs'
+                            location_name = str(row[4]).upper()
+                            price = float(row[5])
+                            
+                            fresh_qty = int(row[6]) if row[6] else 0
+                            dam_qty = int(row[7]) if row[7] else 0
+                            refurb_qty = int(row[8]) if row[8] else 0
+                            rep_qty = int(row[9]) if row[9] else 0
+                            
+                            node, _ = OrgNode.objects.get_or_create(name=location_name, defaults={'node_type': 'Warehouse'})
+                            
+                            if fresh_qty > 0:
+                                InventoryLedger.objects.create(sku_id=sku_id, product_name=product_name, category=category, uom=uom, price=price, quantity_on_hand=fresh_qty, locator_bin_status='Fresh', node_id=node)
+                            if dam_qty > 0:
+                                InventoryLedger.objects.create(sku_id=sku_id, product_name=product_name, category=category, uom=uom, price=price, quantity_on_hand=dam_qty, locator_bin_status='Damaged', node_id=node)
+                            if refurb_qty > 0:
+                                InventoryLedger.objects.create(sku_id=sku_id, product_name=product_name, category=category, uom=uom, price=price, quantity_on_hand=refurb_qty, locator_bin_status='Refurbished', node_id=node)
+                            if rep_qty > 0:
+                                InventoryLedger.objects.create(sku_id=sku_id, product_name=product_name, category=category, uom=uom, price=price, quantity_on_hand=rep_qty, locator_bin_status='Repairable', node_id=node)
+                                
+                            count += 1
+                            
+                    from django.contrib import messages
+                    messages.success(request, f"Successfully imported {count} stock records from Excel.")
+                except Exception as e:
+                    from django.contrib import messages
+                    messages.error(request, f"Failed to import Excel file: {str(e)}")
+            else:
+                from django.contrib import messages
+                messages.error(request, "No Excel file provided for bulk import.")
+                
         return redirect('inventory_list')
 
 from .models import SystemUserProfile
@@ -791,7 +839,15 @@ class UserCreateView(TemplateView):
                 can_access_procurement=True
             )
 
-        users = SystemUserProfile.objects.all().order_by('created_at')
+        logged_in_name = request.session.get('logged_in_name', '')
+        from django.db.models import Case, When, Value, IntegerField
+        users = SystemUserProfile.objects.all().annotate(
+            is_current=Case(
+                When(full_name=logged_in_name, then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField()
+            )
+        ).order_by('is_current', 'created_at')
         selected_uid = request.GET.get('uid')
         
         # Restriction for Staff
@@ -1095,7 +1151,8 @@ class NoticeBoardView(TemplateView):
         return render(request, self.template_name, {
             'notices': notices,
             'can_create': can_create,
-            'can_delete': can_delete
+            'can_delete': can_delete,
+            'active_role': active_role
         })
 
     def post(self, request, *args, **kwargs):
@@ -1107,22 +1164,35 @@ class NoticeBoardView(TemplateView):
             Notice.objects.filter(id=delete_notice_id).delete()
             return redirect('notice_board')
 
-        # Handle Create Action
+        # Handle Create/Edit Action
         if active_role in ['CEO', 'COO', 'HR', 'Operation Head', 'CITO']:
+            action = request.POST.get('action', 'create')
             title = request.POST.get('title')
             content = request.POST.get('content')
             priority = request.POST.get('priority', 'Standard')
             department = request.POST.get('department', 'HQ')
-            author_name = request.session.get('active_role', 'System Admin') # Or could be actual name
+            author_name = request.session.get('active_role', 'System Admin')
             
-            if title and content:
-                Notice.objects.create(
-                    title=title,
-                    content=content,
-                    priority=priority,
-                    department=department,
-                    author_name=author_name
-                )
+            if action == 'edit':
+                edit_notice_id = request.POST.get('edit_notice_id')
+                if edit_notice_id and title and content:
+                    notice = Notice.objects.filter(id=edit_notice_id).first()
+                    # Only allow edit if sender matches or user can delete (CEO/COO)
+                    if notice and (notice.author_name == author_name or active_role in ['CEO', 'COO']):
+                        notice.title = title
+                        notice.content = content
+                        notice.priority = priority
+                        notice.department = department
+                        notice.save()
+            else:
+                if title and content:
+                    Notice.objects.create(
+                        title=title,
+                        content=content,
+                        priority=priority,
+                        department=department,
+                        author_name=author_name
+                    )
         return redirect('notice_board')
 
 
@@ -1434,27 +1504,34 @@ from django.views import View
 class LeadReportExcelView(View):
     def get(self, request, *args, **kwargs):
         from .models import LeadCRM
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="leads_report.csv"'
-        
-        writer = csv.writer(response)
-        writer.writerow(['Lead ID', 'Lead Name', 'Node', 'Pipeline State', 'Phone', 'Address', 'Deal Value', 'Product Inquiry', 'Remarks', 'Created At'])
+        import openpyxl
+        from django.http import HttpResponse
+
+        workbook = openpyxl.Workbook()
+        worksheet = workbook.active
+        worksheet.title = 'Leads Report'
+
+        columns = ['Lead ID', 'Lead Name', 'Node', 'Pipeline State', 'Phone', 'Address', 'Deal Value', 'Product Inquiry', 'Remarks', 'Created At']
+        worksheet.append(columns)
         
         leads = LeadCRM.objects.all().order_by('-created_at')
         for lead in leads:
-            writer.writerow([
+            worksheet.append([
                 lead.id, 
                 lead.lead_name, 
                 lead.node.name if lead.node else 'N/A', 
                 lead.pipeline_state, 
                 lead.phone, 
                 lead.address, 
-                lead.deal_value, 
+                float(lead.deal_value), 
                 lead.product_inquiry, 
                 lead.remarks,
                 lead.created_at.strftime("%Y-%m-%d")
             ])
             
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="leads_report.xlsx"'
+        workbook.save(response)
         return response
 
 
@@ -2088,24 +2165,27 @@ class SystemLogExcelView(View):
             return redirect('dashboard')
             
         from .models import SystemLog
-        import csv
+        import openpyxl
         from django.http import HttpResponse
         
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="system_logs.csv"'
+        workbook = openpyxl.Workbook()
+        worksheet = workbook.active
+        worksheet.title = 'System Logs'
         
-        writer = csv.writer(response)
-        writer.writerow(['Timestamp', 'User', 'Action', 'Details'])
+        worksheet.append(['Timestamp', 'User', 'Action', 'Details'])
         
         logs = SystemLog.objects.all().order_by('-timestamp')
         for log in logs:
-            writer.writerow([
+            worksheet.append([
                 log.timestamp.strftime("%b %d, %Y %H:%M") if log.timestamp else 'N/A',
                 log.user_name,
                 log.action,
                 log.details
             ])
             
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="system_logs.xlsx"'
+        workbook.save(response)
         return response
 
 class ProjectTaskBoardView(TemplateView):

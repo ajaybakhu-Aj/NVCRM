@@ -195,6 +195,13 @@ class AttendanceRecord(models.Model):
     def __str__(self):
         return f"{self.employee_name} - {self.date} ({self.status})"
 
+    @property
+    def is_early_checkout(self):
+        if self.check_out_time:
+            from datetime import time
+            return self.check_out_time < time(17, 0)
+        return False
+
 class MissedAttendanceRequest(models.Model):
     STATUS_CHOICES = [
         ('Pending', 'Pending'),

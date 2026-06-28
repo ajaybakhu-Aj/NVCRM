@@ -33,9 +33,13 @@
                     <h3 class="font-headline-sm text-headline-sm text-primary-fixed uppercase tracking-wider">Stock Tracking</h3>
                 </div>
                 <div class="flex gap-2">
-                    <button class="flex items-center gap-2 bg-surface-container-high text-on-surface px-4 py-2 rounded-lg border border-outline-variant font-label-bold text-label-bold hover:bg-surface-variant">
-                        <span class="material-symbols-outlined text-sm">tune</span>
-                        FILTER
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-sm">search</span>
+                        <input type="text" id="inventoryFilter" onkeyup="filterInventory()" placeholder="Filter Location, SKU..." class="pl-9 pr-4 py-2 bg-surface-container-high text-on-surface rounded-lg border border-outline-variant font-label text-sm focus:outline-none focus:border-primary-fixed transition-colors">
+                    </div>
+                    <button onclick="document.getElementById('bulk-import-modal').classList.remove('hidden')" class="flex items-center gap-2 bg-secondary text-on-secondary px-4 py-2 rounded-lg font-label-bold text-label-bold hover:brightness-110 transition-colors">
+                        <span class="material-symbols-outlined text-sm">upload_file</span>
+                        BULK IMPORT
                     </button>
                     <button onclick="exportTableToCSV('stock-table', 'Stock_Tracking_Report.csv')" class="flex items-center gap-2 bg-success/20 text-success px-4 py-2 rounded-lg font-label-bold text-label-bold hover:bg-success/30 border border-success/30 transition-colors">
                         <span class="material-symbols-outlined text-sm">download</span>
@@ -198,6 +202,31 @@
                     <button type="submit" class="w-full mt-6 bg-primary text-on-primary py-3 rounded font-label-bold uppercase tracking-widest hover:brightness-110 transition-all flex items-center justify-center gap-2">
                         <span class="material-symbols-outlined">add_box</span>
                         Save to Ledger
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Bulk Import Modal -->
+        <div id="bulk-import-modal" class="hidden fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex justify-center items-center p-4 overflow-y-auto">
+            <div class="bg-surface border border-outline-variant rounded-xl w-full max-w-md shadow-2xl relative">
+                <div class="p-6 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low rounded-t-xl">
+                    <h3 class="font-headline-sm text-on-surface uppercase tracking-wider">Bulk Import Stock</h3>
+                    <button onclick="document.getElementById('bulk-import-modal').classList.add('hidden')" class="material-symbols-outlined text-on-surface-variant hover:text-error transition-colors">close</button>
+                </div>
+                <form method="POST" action="{% url 'inventory_list' %}" class="space-y-4 p-6" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="bulk_import">
+                    
+                    <div class="col-span-2">
+                        <label class="block text-[10px] text-outline font-label-caps mb-2">EXCEL FILE (.XLSX)</label>
+                        <p class="text-xs text-on-surface-variant mb-4">Please upload an Excel file with the following columns in order: SKU, Product Name, Category, UOM, Location, Price, Fresh Qty, Damaged Qty, Refurbished Qty, Repairable Qty.</p>
+                        <input type="file" name="excel_file" accept=".xlsx, .xls, .csv" required class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-1.5 rounded focus:outline-none focus:border-primary-fixed file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary-container file:text-primary-fixed hover:file:bg-primary/20 transition-all cursor-pointer">
+                    </div>
+                    
+                    <button type="submit" class="w-full mt-6 bg-secondary text-on-secondary py-3 rounded font-label-bold uppercase tracking-widest hover:brightness-110 transition-all flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined">cloud_upload</span>
+                        Start Import
                     </button>
                 </form>
             </div>
@@ -373,6 +402,27 @@
             row.style.transform = 'scale(1)';
         });
     });
+
+    function filterInventory() {
+        var input, filter, table, tr, td, i, j, txtValue;
+        input = document.getElementById("inventoryFilter");
+        filter = input.value.toUpperCase();
+        table = document.getElementById("stock-table");
+        tr = table.getElementsByTagName("tr");
+        for (i = 1; i < tr.length; i++) {
+            tr[i].style.display = "none";
+            td = tr[i].getElementsByTagName("td");
+            for (j = 0; j < td.length; j++) {
+                if (td[j]) {
+                    txtValue = td[j].textContent || td[j].innerText;
+                    if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                        tr[i].style.display = "";
+                        break;
+                    }
+                }
+            }
+        }
+    }
 
     function exportTableToCSV(table_id, filename) {
         var csv = [];

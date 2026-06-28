@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 
+{% block head %}
+<!-- Nepali Datepicker CSS -->
+<link href="https://nepalidatepicker.sajanmaharjan.com.np/v5/nepali.datepicker/css/nepali.datepicker.v5.0.6.min.css" rel="stylesheet" type="text/css"/>
+{% endblock head %}
+
 {% block content %}
 <style>
     /* Invert the calendar icon for date inputs so they are white on dark backgrounds */
@@ -183,7 +188,6 @@
             </div>
         </div>
         {% endif %}
-        {% endif %}
     </div>
 </div>
 
@@ -284,6 +288,7 @@
         </div>
         <form method="POST" action="{% url 'leave_list' %}" id="leaveRequestForm">
             {% csrf_token %}
+            <input type="hidden" name="action" value="request">
             
             <div class="space-y-4">
                 <div>
@@ -303,12 +308,12 @@
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-[10px] text-outline font-label-caps mb-1">START DATE</label>
-                        <input type="date" name="start_date" required class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed calendar-white">
+                        <label class="block text-[10px] text-outline font-label-caps mb-1">START DATE (B.S.)</label>
+                        <input type="text" id="leave_start_date" name="start_date" required class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed" placeholder="YYYY-MM-DD">
                     </div>
                     <div>
-                        <label class="block text-[10px] text-outline font-label-caps mb-1">END DATE</label>
-                        <input type="date" name="end_date" required class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed calendar-white">
+                        <label class="block text-[10px] text-outline font-label-caps mb-1">END DATE (B.S.)</label>
+                        <input type="text" id="leave_end_date" name="end_date" required class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed" placeholder="YYYY-MM-DD">
                     </div>
                 </div>
                 <div>
@@ -319,7 +324,7 @@
             
             <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-outline-variant">
                 <button type="button" onclick="toggleLeaveModal()" class="px-4 py-2 border border-outline-variant text-on-surface-variant hover:bg-surface-variant rounded transition-all text-xs font-label-caps uppercase tracking-wider">Cancel</button>
-                <button type="button" onclick="document.getElementById('leaveRequestForm').submit()" class="px-4 py-2 bg-primary text-on-primary hover:brightness-110 rounded transition-all text-xs font-label-caps uppercase tracking-wider">Submit Request</button>
+                <button type="submit" class="px-4 py-2 bg-primary text-on-primary hover:brightness-110 rounded transition-all text-xs font-label-caps uppercase tracking-wider">Submit Request</button>
             </div>
         </form>
     </div>
@@ -371,6 +376,16 @@
 {% endblock content %}
 
 {% block scripts %}
+<!-- Nepali Datepicker JS -->
+<script src="https://nepalidatepicker.sajanmaharjan.com.np/v5/nepali.datepicker/js/nepali.datepicker.v5.0.6.min.js" type="text/javascript"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var startEl = document.getElementById("leave_start_date");
+        var endEl = document.getElementById("leave_end_date");
+        if(startEl) startEl.nepaliDatePicker({ ndpYear: true, ndpMonth: true });
+        if(endEl) endEl.nepaliDatePicker({ ndpYear: true, ndpMonth: true });
+    });
+</script>
 <script>
     function toggleLeaveModal() {
         const modal = document.getElementById('leaveModal');

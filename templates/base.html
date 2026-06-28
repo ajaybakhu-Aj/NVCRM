@@ -7,6 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <title>Nightvision HQ - Unified Landing Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -247,7 +248,7 @@
 </button>
 <div id="export-menu" class="hidden absolute top-full right-0 mt-2 w-48 bg-surface-container-high border border-outline-variant rounded-lg shadow-xl overflow-hidden z-50">
 <button onclick="exportToCSV()" class="w-full text-left px-4 py-3 hover:bg-surface-variant text-sm flex items-center gap-2 text-on-surface"><span class="material-symbols-outlined text-success">table</span> Export to Excel</button>
-<button onclick="window.print()" class="w-full text-left px-4 py-3 hover:bg-surface-variant text-sm flex items-center gap-2 text-on-surface"><span class="material-symbols-outlined text-error">picture_as_pdf</span> Export to PDF</button>
+<button onclick="exportToPDF()" class="w-full text-left px-4 py-3 hover:bg-surface-variant text-sm flex items-center gap-2 text-on-surface"><span class="material-symbols-outlined text-error">picture_as_pdf</span> Export to PDF</button>
 </div>
 </div>
 <div class="relative group">
@@ -599,6 +600,31 @@ document.addEventListener('DOMContentLoaded', function() {
     // Poll every 10 seconds
     setInterval(pollNotices, 10000);
 });
+
+function exportToCSV() {
+    alert("Export to Excel functionality is currently bound to specific data tables. Please use the 'EXCEL' buttons located within individual module pages (e.g., Lead Pipeline, Inventory List).");
+}
+
+function exportToPDF() {
+    const element = document.querySelector('main');
+    if (element) {
+        const buttons = element.querySelectorAll('button');
+        buttons.forEach(b => b.style.opacity = '0');
+        
+        var opt = {
+          margin:       0.5,
+          filename:     'CRMERP_Export.pdf',
+          image:        { type: 'jpeg', quality: 0.98 },
+          html2canvas:  { scale: 2, useCORS: true },
+          jsPDF:        { unit: 'in', format: 'letter', orientation: 'landscape' }
+        };
+        html2pdf().set(opt).from(element).save().then(() => {
+            buttons.forEach(b => b.style.opacity = '1');
+        });
+    } else {
+        alert("No content available to export to PDF.");
+    }
+}
 </script>
 
 {% block scripts %}{% endblock scripts %}
