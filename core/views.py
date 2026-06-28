@@ -469,10 +469,13 @@ class AttendanceCheckinView(TemplateView):
         
         action = request.POST.get('action')
         if action == 'missed_attendance':
-            system_user = getattr(request, 'system_user', None)
+            logged_in_name = request.session.get('logged_in_name', 'John Doe')
+            from .models import SystemUserProfile
+            system_user = SystemUserProfile.objects.filter(full_name=logged_in_name).first()
             if not system_user:
-                from django.http import JsonResponse
-                return JsonResponse({'success': False, 'message': 'User not found.'})
+                from django.contrib import messages
+                messages.error(request, 'User profile not found in system.')
+                return redirect('attendance_checkin')
                 
             start_date_str = request.POST.get('start_date')
             end_date_str = request.POST.get('end_date')
