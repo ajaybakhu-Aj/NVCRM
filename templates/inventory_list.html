@@ -27,7 +27,7 @@
 <div class="space-y-gutter-grid">
     <!-- Section: Stock Tracking -->
     <section class="grid grid-cols-12 gap-gutter-grid">
-        <div class="col-span-12 lg:col-span-8 space-y-4">
+        <div class="col-span-12 space-y-4">
             <div class="flex justify-between items-end">
                 <div>
                     <h3 class="font-headline-sm text-headline-sm text-primary-fixed uppercase tracking-wider">Stock Tracking</h3>
@@ -36,6 +36,10 @@
                     <button class="flex items-center gap-2 bg-surface-container-high text-on-surface px-4 py-2 rounded-lg border border-outline-variant font-label-bold text-label-bold hover:bg-surface-variant">
                         <span class="material-symbols-outlined text-sm">tune</span>
                         FILTER
+                    </button>
+                    <button onclick="exportTableToCSV('stock-table', 'Stock_Tracking_Report.csv')" class="flex items-center gap-2 bg-success/20 text-success px-4 py-2 rounded-lg font-label-bold text-label-bold hover:bg-success/30 border border-success/30 transition-colors">
+                        <span class="material-symbols-outlined text-sm">download</span>
+                        EXCEL
                     </button>
                     <button onclick="document.getElementById('add-stock-modal').classList.remove('hidden')" class="bg-primary-container text-on-primary-container px-4 py-2 rounded-lg font-label-bold text-label-bold hover:scale-95 transition-transform">
                         ADD STOCK
@@ -55,34 +59,59 @@
             </div>
             {% endif %}
 
-            <!-- Inventory Table -->
             <div class="bg-surface-container-low rounded-xl border border-outline-variant overflow-x-auto">
-                <table class="w-full text-left border-collapse whitespace-nowrap">
+                <table id="stock-table" class="w-full text-left border-collapse whitespace-nowrap min-w-max">
                     <thead>
-                        <tr class="bg-surface-container text-on-surface-variant uppercase font-label-bold text-[10px] tracking-[0.1em]">
-                            <th class="px-6 py-3 border-b border-outline-variant">SKU ID</th>
-                            <th class="px-6 py-3 border-b border-outline-variant">Product Name</th>
-                            <th class="px-6 py-3 border-b border-outline-variant">Price</th>
-                            <th class="px-6 py-3 border-b border-outline-variant">Bin Status</th>
-                            <th class="px-6 py-3 border-b border-outline-variant text-right">Quantity</th>
-                            <th class="px-6 py-3 border-b border-outline-variant">Last Audit</th>
+                        <tr class="bg-surface-container text-on-surface-variant uppercase font-label-bold text-[11px] tracking-[0.05em]">
+                            <th class="px-4 py-3 border-b border-outline-variant text-left">Location</th>
+                            <th class="px-4 py-3 border-b border-outline-variant text-left">SKU ID</th>
+                            <th class="px-4 py-3 border-b border-outline-variant text-left">Item Desc</th>
+                            <th class="px-4 py-3 border-b border-outline-variant text-left">Category</th>
+                            <th class="px-4 py-3 border-b border-outline-variant text-left">UOM</th>
+                            
+                            <th class="px-4 py-3 border-b border-outline-variant text-right bg-primary-container/10">Fresh Qt</th>
+                            <th class="px-4 py-3 border-b border-outline-variant text-right bg-primary-container/10">Fresh Amt</th>
+                            
+                            <th class="px-4 py-3 border-b border-outline-variant text-right bg-error-container/10">Dam Qty</th>
+                            <th class="px-4 py-3 border-b border-outline-variant text-right bg-error-container/10">Dam Amt</th>
+                            
+                            <th class="px-4 py-3 border-b border-outline-variant text-right bg-secondary-container/10">Refurb Qty</th>
+                            <th class="px-4 py-3 border-b border-outline-variant text-right bg-secondary-container/10">Refurb Amt</th>
+                            
+                            <th class="px-4 py-3 border-b border-outline-variant text-right bg-tertiary-container/10">Rep Qty</th>
+                            <th class="px-4 py-3 border-b border-outline-variant text-right bg-tertiary-container/10">Rep Amt</th>
+                            
+                            <th class="px-4 py-3 border-b border-outline-variant text-right font-bold text-primary-fixed">Tot Qty</th>
+                            <th class="px-4 py-3 border-b border-outline-variant text-right font-bold text-primary-fixed">Tot Amt</th>
                         </tr>
                     </thead>
-                    <tbody class="font-tabular-numeric text-body-md text-on-surface">
+                    <tbody class="font-tabular-numeric text-sm text-on-surface">
                         {% for item in inventory %}
-                        <tr class="zebra-stripe hover:bg-surface-variant transition-colors group">
-                            <td class="px-6 py-4 font-bold text-primary-fixed">{{ item.sku_id }}</td>
-                            <td class="px-6 py-4">{{ item.product_name }}</td>
-                            <td class="px-6 py-4 font-data-mono">Rs. {{ item.price|floatformat:2 }}</td>
-                            <td class="px-6 py-4">
-                                <span class="px-2 py-0.5 rounded-full {% if item.locator_bin_status == 'Fresh' %}bg-primary-container/10 text-primary-fixed border border-primary-fixed{% elif item.locator_bin_status == 'Refurbished' %}bg-secondary-container text-on-secondary-container border border-outline{% elif item.locator_bin_status == 'Repairable' %}bg-surface-tint/20 text-surface-tint border border-surface-tint{% else %}bg-error-container text-on-error-container{% endif %} text-[10px] font-bold uppercase">{{ item.locator_bin_status }}</span>
-                            </td>
-                            <td class="px-6 py-4 text-right {% if item.quantity_on_hand == 0 %}text-error font-bold{% endif %}">{{ item.quantity_on_hand }}</td>
-                            <td class="px-6 py-4 text-on-surface-variant text-sm">{{ item.created_at|date:"d M Y" }}</td>
+                        <tr class="zebra-stripe hover:bg-surface-variant transition-colors group border-b border-outline-variant/30">
+                            <td class="px-4 py-3">{{ item.location }}</td>
+                            <td class="px-4 py-3 font-bold text-primary-fixed">{{ item.sku_id }}</td>
+                            <td class="px-4 py-3 truncate max-w-[150px]" title="{{ item.item_desc }}">{{ item.item_desc }}</td>
+                            <td class="px-4 py-3">{{ item.category }}</td>
+                            <td class="px-4 py-3">{{ item.uom }}</td>
+                            
+                            <td class="px-4 py-3 text-right bg-primary-container/5">{{ item.fresh_qty }}</td>
+                            <td class="px-4 py-3 text-right bg-primary-container/5">Rs. {{ item.fresh_amt|floatformat:2 }}</td>
+                            
+                            <td class="px-4 py-3 text-right bg-error-container/5">{{ item.dam_qty }}</td>
+                            <td class="px-4 py-3 text-right bg-error-container/5">Rs. {{ item.dam_amt|floatformat:2 }}</td>
+                            
+                            <td class="px-4 py-3 text-right bg-secondary-container/5">{{ item.refurb_qty }}</td>
+                            <td class="px-4 py-3 text-right bg-secondary-container/5">Rs. {{ item.refurb_amt|floatformat:2 }}</td>
+                            
+                            <td class="px-4 py-3 text-right bg-tertiary-container/5">{{ item.rep_qty }}</td>
+                            <td class="px-4 py-3 text-right bg-tertiary-container/5">Rs. {{ item.rep_amt|floatformat:2 }}</td>
+                            
+                            <td class="px-4 py-3 text-right font-bold">{{ item.tot_qty }}</td>
+                            <td class="px-4 py-3 text-right font-bold text-primary-fixed">Rs. {{ item.tot_amt|floatformat:2 }}</td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" class="px-6 py-8 text-center text-on-surface-variant">No inventory records found. Add stock to begin.</td>
+                            <td colspan="15" class="px-6 py-8 text-center text-on-surface-variant">No inventory records found. Add stock to begin.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -115,21 +144,40 @@
                             <input type="text" name="sku_id" required placeholder="NV-100-X" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed">
                         </div>
                         <div>
+                            <label class="block text-[10px] text-outline font-label-caps mb-1">CATEGORY</label>
+                            <input type="text" name="category" placeholder="e.g. Electronics" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-outline font-label-caps mb-1">UNIT OF MEASURE (UOM)</label>
+                            <input type="text" name="uom" placeholder="e.g. Pcs, Box" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed">
+                        </div>
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="block text-[10px] text-outline font-label-caps mb-1">LOCATION</label>
+                            <input type="text" name="location" required placeholder="e.g. HQ-NEPAL" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed">
+                        </div>
+                        <div class="col-span-2 md:col-span-1">
                             <label class="block text-[10px] text-outline font-label-caps mb-1">UNIT PRICE (Rs.)</label>
                             <input type="number" step="0.01" name="price" required placeholder="0.00" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed">
                         </div>
-                        <div>
-                            <label class="block text-[10px] text-outline font-label-caps mb-1">QUANTITY</label>
-                            <input type="number" name="quantity" required min="1" placeholder="10" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] text-outline font-label-caps mb-1">BIN STATUS</label>
-                            <select name="locator_bin_status" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed">
-                                <option value="Fresh">Fresh</option>
-                                <option value="Refurbished">Refurbished</option>
-                                <option value="Repairable">Repairable</option>
-                                <option value="Damaged">Damaged</option>
-                            </select>
+                        
+                        <!-- Quantities Section -->
+                        <div class="col-span-2 grid grid-cols-4 gap-4 mt-2 border-t border-outline-variant/30 pt-4">
+                            <div>
+                                <label class="block text-[10px] text-primary-fixed font-label-caps mb-1">FRESH QTY</label>
+                                <input type="number" name="fresh_qty" min="0" placeholder="0" class="w-full bg-primary-container/10 border border-primary/20 text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-error font-label-caps mb-1">DAMAGED QTY</label>
+                                <input type="number" name="dam_qty" min="0" placeholder="0" class="w-full bg-error-container/10 border border-error/20 text-on-surface p-2 rounded focus:outline-none focus:border-error">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-secondary font-label-caps mb-1">REFURB QTY</label>
+                                <input type="number" name="refurb_qty" min="0" placeholder="0" class="w-full bg-secondary-container/10 border border-secondary/20 text-on-surface p-2 rounded focus:outline-none focus:border-secondary">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-tertiary font-label-caps mb-1">REPAIR QTY</label>
+                                <input type="number" name="rep_qty" min="0" placeholder="0" class="w-full bg-tertiary-container/10 border border-tertiary/20 text-on-surface p-2 rounded focus:outline-none focus:border-tertiary">
+                            </div>
                         </div>
                     </div>
                     
@@ -141,44 +189,20 @@
             </div>
         </div>
         
-        <!-- Visual Block on 'Repairable' Checkout -->
-        <div class="col-span-12 lg:col-span-4 space-y-4">
-            <div class="repairable-block p-6 rounded-xl flex flex-col h-full justify-between shadow-lg">
-                <div>
-                    <div class="flex items-center justify-between mb-4">
-                        <span class="material-symbols-outlined text-primary-fixed text-4xl" style="font-variation-settings: 'FILL' 1;">build_circle</span>
-                        <span class="bg-surface/50 px-3 py-1 rounded text-[10px] font-bold text-on-surface tracking-widest">ACTIVE QUEUE</span>
-                    </div>
-                    <h4 class="font-headline-sm text-headline-sm text-tertiary mb-2">Repairable Checkout</h4>
-                    <p class="text-body-sm text-on-secondary-container mb-6">Units currently staged for technical refurbishment. Authorize transfer to Workshop 7.</p>
-                    
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center text-body-sm">
-                            <span class="text-on-surface-variant">Pending Units:</span>
-                            <span class="font-bold text-primary-fixed">42</span>
-                        </div>
-                        <div class="flex justify-between items-center text-body-sm">
-                            <span class="text-on-surface-variant">Est. Value Recovery:</span>
-                            <span class="font-bold text-primary-fixed">$14,200.00</span>
-                        </div>
-                        <div class="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
-                            <div class="bg-primary-fixed h-full w-2/3"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <button class="w-full bg-primary-fixed text-on-primary-fixed py-3 mt-8 font-label-bold text-label-bold rounded-lg hover:brightness-110 active:scale-95 transition-all uppercase">
-                    Release to Maintenance
-                </button>
-            </div>
-        </div>
+        <!-- Removed Repairable Checkout from here -->
     </section>
     
     <!-- Section: Accounts Receivable -->
     <section class="space-y-4">
-        <div class="flex items-center gap-3">
-            <span class="material-symbols-outlined text-primary-fixed">account_balance_wallet</span>
-            <h3 class="font-headline-sm text-headline-sm text-primary-fixed uppercase tracking-wider">Accounts Receivable</h3>
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary-fixed">account_balance_wallet</span>
+                <h3 class="font-headline-sm text-headline-sm text-primary-fixed uppercase tracking-wider">Accounts Receivable</h3>
+            </div>
+            <button onclick="exportTableToCSV('ar-table', 'Accounts_Receivable_Report.csv')" class="flex items-center gap-2 bg-success/20 text-success px-4 py-2 rounded-lg font-label-bold text-label-bold hover:bg-success/30 border border-success/30 transition-colors">
+                <span class="material-symbols-outlined text-sm">download</span>
+                EXCEL
+            </button>
         </div>
         
         <div class="grid grid-cols-12 gap-gutter-grid">
@@ -198,7 +222,7 @@
                     </div>
                 </div>
                 
-                <table class="w-full text-left border-collapse whitespace-nowrap">
+                <table id="ar-table" class="w-full text-left border-collapse whitespace-nowrap">
                     <thead>
                         <tr class="text-on-surface-variant uppercase font-label-bold text-[10px] tracking-[0.1em]">
                             <th class="px-6 py-4 border-b border-outline-variant">UUID</th>
@@ -287,6 +311,39 @@
             </div>
         </div>
     </section>
+    <!-- Visual Block on 'Repairable' Checkout (Moved to bottom) -->
+    <section class="mt-8">
+        <div class="repairable-block p-6 rounded-xl flex flex-col md:flex-row h-full justify-between shadow-lg items-center gap-6">
+            <div class="flex-1">
+                <div class="flex items-center gap-4 mb-4">
+                    <span class="material-symbols-outlined text-primary-fixed text-4xl" style="font-variation-settings: 'FILL' 1;">build_circle</span>
+                    <span class="bg-surface/50 px-3 py-1 rounded text-[10px] font-bold text-on-surface tracking-widest">ACTIVE QUEUE</span>
+                </div>
+                <h4 class="font-headline-sm text-headline-sm text-tertiary mb-2">Repairable Checkout</h4>
+                <p class="text-body-sm text-on-secondary-container">Units currently staged for technical refurbishment. Authorize transfer to Workshop 7.</p>
+            </div>
+            
+            <div class="flex-1 space-y-3 min-w-[250px]">
+                <div class="flex justify-between items-center text-body-sm">
+                    <span class="text-on-surface-variant">Pending Units:</span>
+                    <span class="font-bold text-primary-fixed">42</span>
+                </div>
+                <div class="flex justify-between items-center text-body-sm">
+                    <span class="text-on-surface-variant">Est. Value Recovery:</span>
+                    <span class="font-bold text-primary-fixed">$14,200.00</span>
+                </div>
+                <div class="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+                    <div class="bg-primary-fixed h-full w-2/3"></div>
+                </div>
+            </div>
+            
+            <div class="flex-1 text-right">
+                <button class="bg-primary-fixed text-on-primary-fixed px-8 py-3 font-label-bold text-label-bold rounded-lg hover:brightness-110 active:scale-95 transition-all uppercase whitespace-nowrap">
+                    Release to Maintenance
+                </button>
+            </div>
+        </div>
+    </section>
 </div>
 {% endblock content %}
 
@@ -302,5 +359,34 @@
             row.style.transform = 'scale(1)';
         });
     });
+
+    function exportTableToCSV(table_id, filename) {
+        var csv = [];
+        var rows = document.querySelectorAll("#" + table_id + " tr");
+        
+        for (var i = 0; i < rows.length; i++) {
+            var row = [], cols = rows[i].querySelectorAll("td, th");
+            
+            for (var j = 0; j < cols.length; j++) 
+                row.push('"' + cols[j].innerText.replace(/"/g, '""').trim() + '"');
+            
+            csv.push(row.join(","));        
+        }
+
+        downloadCSV(csv.join("\n"), filename);
+    }
+
+    function downloadCSV(csv, filename) {
+        var csvFile;
+        var downloadLink;
+
+        csvFile = new Blob([csv], {type: "text/csv"});
+        downloadLink = document.createElement("a");
+        downloadLink.download = filename;
+        downloadLink.href = window.URL.createObjectURL(csvFile);
+        downloadLink.style.display = "none";
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+    }
 </script>
 {% endblock scripts %}

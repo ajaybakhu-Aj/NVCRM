@@ -161,6 +161,28 @@
                 </tbody>
             </table>
         </div>
+        
+        <!-- Pagination Controls -->
+        {% if leave_requests.has_other_pages %}
+        <div class="flex justify-between items-center mt-4 pt-4 border-t border-outline-variant/30">
+            <span class="text-[10px] font-label-caps uppercase text-outline tracking-wider">
+                Page {{ leave_requests.number }} of {{ leave_requests.paginator.num_pages }}
+            </span>
+            <div class="flex gap-2">
+                {% if leave_requests.has_previous %}
+                <a href="?page={{ leave_requests.previous_page_number }}" class="px-3 py-1 border border-outline-variant text-on-surface hover:bg-surface-variant rounded text-[10px] font-label-caps uppercase tracking-wider transition-all">Previous</a>
+                {% else %}
+                <span class="px-3 py-1 border border-outline-variant/30 text-outline rounded text-[10px] font-label-caps uppercase tracking-wider cursor-not-allowed">Previous</span>
+                {% endif %}
+                
+                {% if leave_requests.has_next %}
+                <a href="?page={{ leave_requests.next_page_number }}" class="px-3 py-1 border border-outline-variant text-on-surface hover:bg-surface-variant rounded text-[10px] font-label-caps uppercase tracking-wider transition-all">Next</a>
+                {% else %}
+                <span class="px-3 py-1 border border-outline-variant/30 text-outline rounded text-[10px] font-label-caps uppercase tracking-wider cursor-not-allowed">Next</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 

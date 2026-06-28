@@ -2,8 +2,40 @@ from django.shortcuts import render, redirect
 from django.views.generic import TemplateView
 from django.contrib import messages
 import calendar
+import math
 from datetime import date, datetime
 from .models import CalendarEvent
+
+def calculate_haversine_distance(lat1, lon1, lat2, lon2):
+    R = 6371000
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+    a = math.sin(delta_phi / 2.0) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2.0) ** 2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
+def handle_remote_checkin_notification(request, lat, lng, employee_name, check_type_str):
+    if lat is None or lng is None:
+        return
+    active_role = request.session.get('active_role', '').upper()
+    if active_role in ['SALES', 'IT', 'IT TEAM']:
+        OFFICE_LAT = 27.6773098
+        OFFICE_LNG = 85.3979076
+        dist = calculate_haversine_distance(lat, lng, OFFICE_LAT, OFFICE_LNG)
+        if dist > 50:
+            from .models import SystemUserProfile, SystemNotification
+            target_roles = ['HR', 'OPERATION HEAD', 'HR AND OPERATION HEAD', 'COO']
+            recipients = [u for u in SystemUserProfile.objects.all() if u.position.upper() in target_roles]
+            action = "Checked In" if check_type_str == 'in' else "Checked Out"
+            msg = f"{employee_name} ({active_role}) has {action} remotely from {int(dist)}m away."
+            for user in recipients:
+                SystemNotification.objects.create(
+                    recipient=user,
+                    message=msg,
+                    link='/attendance/'
+                )
 
 class DashboardView(TemplateView):
     template_name = "dashboard.html"
@@ -88,16 +120,25 @@ class DashboardView(TemplateView):
             end_date__gte=today
         )
         
-        attended_names = AttendanceRecord.objects.filter(date=today).values_list('employee_name', flat=True)
+        attended_records = AttendanceRecord.objects.filter(
+            date=today,
+            check_in_time__isnull=False,
+            latitude__isnull=False
+        )
         on_leave_names = on_leave_today.values_list('employee_name', flat=True)
         
         all_users = SystemUserProfile.objects.exclude(full_name__in=list(on_leave_names))
         attendance_status = []
         for user in all_users:
-            has_checked_in = user.full_name in list(attended_names)
+            record = attended_records.filter(employee_name=user.full_name).first()
+            if record:
+                status = 'checked_out' if record.check_out_time else 'checked_in'
+            else:
+                status = 'not_checked_in'
+                
             attendance_status.append({
                 'user': user,
-                'has_checked_in': has_checked_in
+                'status': status
             })
 
         active_role = request.session.get('active_role', '')
@@ -135,7 +176,7 @@ class DashboardView(TemplateView):
         action = request.POST.get('action')
         if action == 'delete_event':
             active_role = request.session.get('active_role', '')
-            if active_role in ['CEO', 'COO', 'HR', 'Operation Head', 'CITO']:
+            if active_role.upper() in ['CEO', 'COO', 'HR', 'OPERATION HEAD', 'HR AND OPERATION HEAD', 'CITO', 'CHAIRMAN', 'OPERATION', 'ADMIN']:
                 event_id = request.POST.get('event_id')
                 if event_id:
                     CalendarEvent.objects.filter(id=event_id).delete()
@@ -206,9 +247,18 @@ class DashboardView(TemplateView):
                 }
             )
 
-            if not created and not record.check_out_time:
+            is_new_checkout = False
+            check_type = request.POST.get('check_type')
+            if check_type == 'in':
+                pass # Already checked in
+            elif not created and not record.check_out_time:
                 record.check_out_time = current_time
                 record.save()
+                is_new_checkout = True
+                
+            if created or is_new_checkout:
+                c_type = 'in' if created else 'out'
+                handle_remote_checkin_notification(request, lat, lng, logged_in_name, c_type)
 
             from django.http import JsonResponse
             return JsonResponse({
@@ -240,6 +290,20 @@ class AttendanceCheckinView(TemplateView):
         
         # Pre-populate simulated attendance history for the user for the current month if empty
         logged_in_name = request.session.get('logged_in_name', 'John Doe')
+        active_role = request.session.get('active_role', '')
+        
+        exec_roles = ['CEO', 'COO', 'HR', 'OPERATION HEAD', 'HR AND OPERATION HEAD']
+        can_view_all = active_role.upper() in exec_roles
+        
+        view_user_name = request.GET.get('view_user_name', logged_in_name)
+        if not can_view_all:
+            view_user_name = logged_in_name
+            
+        from .models import SystemUserProfile
+        all_users = []
+        if can_view_all:
+            all_users = SystemUserProfile.objects.values('full_name', 'uid')
+
         today = date.today()
         today_np = nepali_datetime.date.today()
         year = int(request.GET.get('year', today_np.year))
@@ -294,7 +358,7 @@ class AttendanceCheckinView(TemplateView):
 
         # Fetch records for selected month
         records = AttendanceRecord.objects.filter(
-            employee_name=logged_in_name,
+            employee_name=view_user_name,
             date__range=(start_date, end_date)
         )
         records_by_date = {r.date: r for r in records}
@@ -390,6 +454,9 @@ class AttendanceCheckinView(TemplateView):
             'is_checked_in': is_checked_in,
             'is_checked_out': is_checked_out,
             'today_record': today_record,
+            'all_users': all_users,
+            'view_user_name': view_user_name,
+            'can_view_all': can_view_all,
         }
         return render(request, self.template_name, context)
 
@@ -426,9 +493,18 @@ class AttendanceCheckinView(TemplateView):
             }
         )
 
-        if not created and not record.check_out_time:
+        is_new_checkout = False
+        check_type = request.POST.get('check_type')
+        if check_type == 'in':
+            pass
+        elif not created and not record.check_out_time:
             record.check_out_time = current_time
             record.save()
+            is_new_checkout = True
+
+        if created or is_new_checkout:
+            c_type = 'in' if created else 'out'
+            handle_remote_checkin_notification(request, lat, lng, logged_in_name, c_type)
 
         from django.http import JsonResponse
         return JsonResponse({
@@ -445,7 +521,49 @@ class InventoryListView(TemplateView):
     
     def get(self, request, *args, **kwargs):
         from .models import InventoryLedger, AccountsReceivable
-        inventory = InventoryLedger.objects.all().order_by('-created_at')
+        raw_inventory = InventoryLedger.objects.all()
+        
+        aggregated_data = {}
+        for item in raw_inventory:
+            loc = item.node_id.name if item.node_id else 'Unknown'
+            sku = item.sku_id
+            key = (loc, sku)
+            
+            if key not in aggregated_data:
+                aggregated_data[key] = {
+                    'location': loc,
+                    'sku_id': sku,
+                    'item_desc': item.product_name,
+                    'category': item.category,
+                    'uom': item.uom,
+                    'fresh_qty': 0, 'fresh_amt': 0.0,
+                    'dam_qty': 0, 'dam_amt': 0.0,
+                    'refurb_qty': 0, 'refurb_amt': 0.0,
+                    'rep_qty': 0, 'rep_amt': 0.0,
+                    'tot_qty': 0, 'tot_amt': 0.0,
+                }
+            
+            status = item.locator_bin_status
+            qty = item.quantity_on_hand
+            amt = float(qty * item.price)
+            
+            if status == 'Fresh':
+                aggregated_data[key]['fresh_qty'] += qty
+                aggregated_data[key]['fresh_amt'] += amt
+            elif status == 'Damaged':
+                aggregated_data[key]['dam_qty'] += qty
+                aggregated_data[key]['dam_amt'] += amt
+            elif status == 'Refurbished':
+                aggregated_data[key]['refurb_qty'] += qty
+                aggregated_data[key]['refurb_amt'] += amt
+            elif status == 'Repairable':
+                aggregated_data[key]['rep_qty'] += qty
+                aggregated_data[key]['rep_amt'] += amt
+                
+            aggregated_data[key]['tot_qty'] += qty
+            aggregated_data[key]['tot_amt'] += amt
+
+        inventory = list(aggregated_data.values())
         accounts = AccountsReceivable.objects.all().order_by('-created_at')[:5]
         return render(request, self.template_name, {
             'inventory': inventory,
@@ -459,26 +577,49 @@ class InventoryListView(TemplateView):
         if action == 'add_stock':
             sku_id = request.POST.get('sku_id')
             product_name = request.POST.get('product_name')
+            category = request.POST.get('category', 'Electronics')
+            uom = request.POST.get('uom', 'Pcs')
             price = request.POST.get('price')
-            quantity = request.POST.get('quantity')
-            bin_status = request.POST.get('locator_bin_status', 'Fresh')
+            
+            location_name = request.POST.get('location', 'HQ-NEPAL').upper()
+            
+            fresh_qty = int(request.POST.get('fresh_qty') or 0)
+            dam_qty = int(request.POST.get('dam_qty') or 0)
+            refurb_qty = int(request.POST.get('refurb_qty') or 0)
+            rep_qty = int(request.POST.get('rep_qty') or 0)
+            
             product_image = request.FILES.get('product_image')
             
-            hq_node = OrgNode.objects.filter(node_type='HQ').first()
-            if not hq_node:
-                hq_node = OrgNode.objects.create(name="HQ-NEPAL", node_type="HQ")
+            node, _ = OrgNode.objects.get_or_create(name=location_name, defaults={'node_type': 'Warehouse'})
                 
-            InventoryLedger.objects.create(
-                sku_id=sku_id,
-                product_name=product_name,
-                price=price,
-                quantity_on_hand=quantity,
-                locator_bin_status=bin_status,
-                node_id=hq_node,
-                product_image=product_image
-            )
+            if fresh_qty > 0:
+                InventoryLedger.objects.create(
+                    sku_id=sku_id, product_name=product_name, category=category, uom=uom,
+                    price=price, quantity_on_hand=fresh_qty, locator_bin_status='Fresh',
+                    node_id=node, product_image=product_image
+                )
+            if dam_qty > 0:
+                InventoryLedger.objects.create(
+                    sku_id=sku_id, product_name=product_name, category=category, uom=uom,
+                    price=price, quantity_on_hand=dam_qty, locator_bin_status='Damaged',
+                    node_id=node, product_image=product_image
+                )
+            if refurb_qty > 0:
+                InventoryLedger.objects.create(
+                    sku_id=sku_id, product_name=product_name, category=category, uom=uom,
+                    price=price, quantity_on_hand=refurb_qty, locator_bin_status='Refurbished',
+                    node_id=node, product_image=product_image
+                )
+            if rep_qty > 0:
+                InventoryLedger.objects.create(
+                    sku_id=sku_id, product_name=product_name, category=category, uom=uom,
+                    price=price, quantity_on_hand=rep_qty, locator_bin_status='Repairable',
+                    node_id=node, product_image=product_image
+                )
+                
             from django.contrib import messages
-            messages.success(request, f"Successfully added {quantity} units of {product_name} to inventory.")
+            total_qty = fresh_qty + dam_qty + refurb_qty + rep_qty
+            messages.success(request, f"Successfully added {total_qty} units of {product_name} to {location_name} inventory.")
             
         return redirect('inventory_list')
 
@@ -602,9 +743,20 @@ class UserCreateView(TemplateView):
         if not selected_user:
             selected_user = users.first()
 
+        can_view_documents = False
+        documents = []
+        if selected_user:
+            logged_in_uid = request.session.get('logged_in_uid')
+            active_role = request.session.get('active_role', '')
+            if active_role.upper() in ['CEO', 'COO', 'HR', 'OPERATION HEAD', 'HR AND OPERATION HEAD'] or selected_user.uid == logged_in_uid:
+                can_view_documents = True
+                documents = selected_user.documents.all().order_by('-uploaded_at')
+
         context = {
             'users': users,
             'selected_user': selected_user,
+            'can_view_documents': can_view_documents,
+            'documents': documents,
         }
         return render(request, self.template_name, context)
 
@@ -619,7 +771,7 @@ class UserCreateView(TemplateView):
 
         if action == 'create':
             full_name = request.POST.get('full_name')
-            position = request.POST.get('position')
+            position = request.POST.get('position') or 'Staff'
             node = request.POST.get('node', 'HQ-NEPAL')
             password = request.POST.get('password', 'Admin')
             profile_image_input = request.POST.get('profile_image')
@@ -627,6 +779,7 @@ class UserCreateView(TemplateView):
             pan_number = request.POST.get('pan_number', '')
             citizenship_number = request.POST.get('citizenship_number', '')
             contact_number = request.POST.get('contact_number', '')
+            emergency_contact_number = request.POST.get('emergency_contact_number', '')
             email = request.POST.get('email', '')
             address = request.POST.get('address', '')
             
@@ -664,7 +817,7 @@ class UserCreateView(TemplateView):
                 profile_image = random.choice(avatars)
 
             # Assign all page accesses by default to high-level roles
-            is_senior = position.upper() in ['CEO', 'CITO', 'COO', 'HR AND OPERATION HEAD', 'ADMIN', 'SYSTEM ADMIN', 'HR', 'OPERATION HEAD']
+            is_senior = position.upper() in ['CEO', 'CITO', 'COO', 'HR AND OPERATION HEAD', 'ADMIN', 'SYSTEM ADMIN', 'HR', 'OPERATION HEAD', 'CHAIRMAN', 'OPERATION']
 
             user = SystemUserProfile.objects.create(
                 full_name=full_name,
@@ -675,6 +828,7 @@ class UserCreateView(TemplateView):
                 pan_number=pan_number,
                 citizenship_number=citizenship_number,
                 contact_number=contact_number,
+                emergency_contact_number=emergency_contact_number,
                 email=email,
                 address=address,
                 gender=gender,
@@ -725,7 +879,11 @@ class UserCreateView(TemplateView):
             if user:
                 old_name = user.full_name
                 user.full_name = request.POST.get('full_name', user.full_name)
-                user.position = request.POST.get('position', user.position)
+                
+                active_role_upper = request.session.get('active_role', '').upper()
+                if active_role_upper in ['CEO', 'COO', 'HR AND OPERATION HEAD']:
+                    user.position = request.POST.get('position', user.position)
+                    
                 user.node = request.POST.get('node', user.node)
                 
                 password = request.POST.get('password', '').strip()
@@ -734,8 +892,8 @@ class UserCreateView(TemplateView):
                     
                 profile_image_file = request.FILES.get('profile_image_file')
                 if profile_image_file:
-                    fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'profiles'))
-                    filename = fs.save(profile_image_file.name, profile_image_file)
+                    fs = FileSystemStorage()
+                    filename = fs.save('profiles/' + profile_image_file.name, profile_image_file)
                     user.profile_image = fs.url(filename)
                 else:
                     user.profile_image = request.POST.get('profile_image', user.profile_image)
@@ -743,6 +901,7 @@ class UserCreateView(TemplateView):
                 user.pan_number = request.POST.get('pan_number', user.pan_number)
                 user.citizenship_number = request.POST.get('citizenship_number', user.citizenship_number)
                 user.contact_number = request.POST.get('contact_number', user.contact_number)
+                user.emergency_contact_number = request.POST.get('emergency_contact_number', user.emergency_contact_number)
                 user.email = request.POST.get('email', user.email)
                 user.address = request.POST.get('address', user.address)
                 
@@ -760,8 +919,8 @@ class UserCreateView(TemplateView):
                 user.fleet_command = request.POST.get('fleet_command') == 'true'
                 
                 # Page Access Permissions - Restricted to Admin
-                active_role_upper = request.session.get('active_role', '').upper()
-                if active_role_upper in ['ADMIN', 'SYSTEM ADMIN', 'CEO', 'COO', 'CITO', 'HR AND OPERATION HEAD', 'HR', 'OPERATION HEAD']:
+                active_role_upper = request.session.get('active_role', '').upper().strip()
+                if active_role_upper in ['ADMIN', 'SYSTEM ADMIN', 'CEO', 'COO', 'CITO', 'HR AND OPERATION HEAD', 'HR AND OPERATION', 'HR', 'OPERATION HEAD', 'CHAIRMAN', 'OPERATION']:
                     if 'can_access_dashboard' in request.POST:
                         user.can_access_dashboard = request.POST.get('can_access_dashboard') == 'true'
                     if 'can_access_notice_board' in request.POST:
@@ -782,6 +941,12 @@ class UserCreateView(TemplateView):
                         user.can_access_pos = request.POST.get('can_access_pos') == 'true'
                     if 'can_access_procurement' in request.POST:
                         user.can_access_procurement = request.POST.get('can_access_procurement') == 'true'
+                    if 'can_access_system_log' in request.POST:
+                        user.can_access_system_log = request.POST.get('can_access_system_log') == 'true'
+                    if 'can_access_task_board' in request.POST:
+                        user.can_access_task_board = request.POST.get('can_access_task_board') == 'true'
+                    if 'can_access_staff_payroll' in request.POST:
+                        user.can_access_staff_payroll = request.POST.get('can_access_staff_payroll') == 'true'
                 
                 user.save()
                 
@@ -821,6 +986,22 @@ class UserCreateView(TemplateView):
         elif action == 'quick_provision':
             SystemUserProfile.objects.all().delete()
             return redirect('/users/create/')
+            
+        elif action == 'upload_document':
+            document_title = request.POST.get('document_title')
+            document_file = request.FILES.get('document_file')
+            active_role_upper = request.session.get('active_role', '').upper()
+            
+            can_upload = active_role_upper in ['CEO', 'COO', 'HR', 'OPERATION HEAD', 'HR AND OPERATION HEAD'] or uid == request.session.get('logged_in_uid')
+            if can_upload and document_title and document_file:
+                user = SystemUserProfile.objects.get(uid=uid)
+                from .models import StaffDocument
+                StaffDocument.objects.create(
+                    user=user,
+                    title=document_title,
+                    file=document_file
+                )
+            return redirect(f'/users/create/?uid={uid}')
 
         return redirect('/users/create/')
 
@@ -834,13 +1015,23 @@ class NoticeBoardView(TemplateView):
         active_role = request.session.get('active_role', '')
         # Allow these roles to create notices
         can_create = active_role in ['CEO', 'COO', 'HR', 'Operation Head', 'CITO']
+        can_delete = active_role in ['CEO', 'COO']
         return render(request, self.template_name, {
             'notices': notices,
-            'can_create': can_create
+            'can_create': can_create,
+            'can_delete': can_delete
         })
 
     def post(self, request, *args, **kwargs):
         active_role = request.session.get('active_role', '')
+        
+        # Handle Delete Action
+        delete_notice_id = request.POST.get('delete_notice_id')
+        if delete_notice_id and active_role in ['CEO', 'COO']:
+            Notice.objects.filter(id=delete_notice_id).delete()
+            return redirect('notice_board')
+
+        # Handle Create Action
         if active_role in ['CEO', 'COO', 'HR', 'Operation Head', 'CITO']:
             title = request.POST.get('title')
             content = request.POST.get('content')
@@ -892,15 +1083,18 @@ class LeaveListView(TemplateView):
 
         requests_list = LeaveRequest.objects.all().order_by('-created_at')
 
+        from django.core.paginator import Paginator
+        paginator = Paginator(requests_list, 25)
+        page_number = request.GET.get('page', 1)
+        page_obj = paginator.get_page(page_number)
+
         # Allowances from DB
         from .models import LeaveSettings
         settings, created = LeaveSettings.objects.get_or_create(id=1)
         allowances = {
             'Casual': settings.casual_leave_days,
             'Sick': settings.sick_leave_days,
-            'Annual': settings.annual_leave_days,
-            'Maternity': settings.maternity_leave_days,
-            'Paternity': settings.paternity_leave_days
+            'Annual': settings.annual_leave_days
         }
         
         # Calculate used days for approved leaves for John Doe (current operator)
@@ -927,7 +1121,7 @@ class LeaveListView(TemplateView):
         can_approve = active_role.upper() in ['COO', 'HR', 'OPERATION HEAD', 'HR AND OPERATION HEAD', 'CEO', 'ADMIN', 'SYSTEM ADMIN', 'CITO']
 
         context = {
-            'leave_requests': requests_list,
+            'leave_requests': page_obj,
             'balances': balances,
             'leave_types': LeaveRequest.LEAVE_TYPES,
             'can_approve': can_approve,
@@ -1070,6 +1264,7 @@ class LeadPipelineView(TemplateView):
             address = request.POST.get('address', '')
             deal_value_str = request.POST.get('deal_value', '0')
             product_inquiry = request.POST.get('product_inquiry', '')
+            remarks = request.POST.get('remarks', '')
             try:
                 deal_value = float(deal_value_str)
             except ValueError:
@@ -1085,7 +1280,8 @@ class LeadPipelineView(TemplateView):
                         phone=phone,
                         address=address,
                         deal_value=deal_value,
-                        product_inquiry=product_inquiry
+                        product_inquiry=product_inquiry,
+                        remarks=remarks
                     )
                 except OrgNode.DoesNotExist:
                     pass
@@ -1105,6 +1301,36 @@ class LeadPipelineView(TemplateView):
                 LeadCRM.objects.filter(id=lead_id).delete()
 
         return redirect('lead_pipeline')
+
+import csv
+from django.http import HttpResponse
+from django.views import View
+
+class LeadReportExcelView(View):
+    def get(self, request, *args, **kwargs):
+        from .models import LeadCRM
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="leads_report.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow(['Lead ID', 'Lead Name', 'Node', 'Pipeline State', 'Phone', 'Address', 'Deal Value', 'Product Inquiry', 'Remarks', 'Created At'])
+        
+        leads = LeadCRM.objects.all().order_by('-created_at')
+        for lead in leads:
+            writer.writerow([
+                lead.id, 
+                lead.lead_name, 
+                lead.node.name if lead.node else 'N/A', 
+                lead.pipeline_state, 
+                lead.phone, 
+                lead.address, 
+                lead.deal_value, 
+                lead.product_inquiry, 
+                lead.remarks,
+                lead.created_at.strftime("%Y-%m-%d")
+            ])
+            
+        return response
 
 
 from django.views import View
@@ -1290,8 +1516,17 @@ class AccountsReceivableView(View):
         action = request.POST.get('action')
         invoice_id = request.POST.get('invoice_id')
         
-        if action == 'delete' and invoice_id and is_admin:
-            AccountsReceivable.objects.filter(id=invoice_id).delete()
+        if action == 'delete' and invoice_id:
+            system_user = getattr(request, 'system_user', None)
+            is_ceo = (active_role == 'CEO') or (system_user and system_user.role == 'CEO')
+            
+            if is_ceo:
+                AccountsReceivable.objects.filter(id=invoice_id).delete()
+                from django.contrib import messages
+                messages.success(request, 'Invoice deleted successfully.')
+            else:
+                from django.contrib import messages
+                messages.error(request, 'Access Denied: Only the CEO can delete generated invoices.')
             return redirect('accounts_receivable')
 
         if action == 'create':
@@ -1387,8 +1622,7 @@ class AccountsReceivableView(View):
                     pass
 
         elif action == 'delete':
-            if invoice_id:
-                AccountsReceivable.objects.filter(id=invoice_id).delete()
+            pass # Deletion is now fully handled at the beginning of the post method
 
         return redirect('accounts_receivable')
 
@@ -1547,7 +1781,7 @@ class StaffPayrollReportView(TemplateView):
         from django.http import HttpResponse
         
         active_role = request.session.get('active_role', '').upper()
-        allowed_roles = ['CEO', 'COO', 'HR', 'OPERATION HEAD', 'HR AND OPERATION HEAD', 'CITO', 'ADMIN']
+        allowed_roles = ['CEO', 'COO', 'HR', 'OPERATION HEAD', 'HR AND OPERATION HEAD', 'CITO', 'ADMIN', 'CHAIRMAN', 'OPERATION']
         
         if active_role not in allowed_roles:
             messages.error(request, "Access Denied: You do not have permission to view the Payroll Report.")
@@ -1566,35 +1800,32 @@ class StaffPayrollReportView(TemplateView):
             emp = EmployeeProfile.objects.filter(first_name__icontains=u.full_name.split(' ')[0]).first()
             base_salary = float(emp.base_gross_salary) if emp else 50000.0
             
-            # Assuming standard 160 hours per month
-            hourly_rate = base_salary / 160.0
-            
-            # Sum up hours worked
+            # Day-based calculations for Excel format
             emp_records = AttendanceRecord.objects.filter(employee_name=u.full_name, status__in=['Present', 'Late'])
-            total_hours = 0.0
             
-            for record in emp_records:
-                # If they checked in but haven't checked out, we can't reliably calculate. We'll skip or assume 8 hrs.
-                if record.check_in_time and record.check_out_time:
-                    check_in = datetime.combine(date.today(), record.check_in_time)
-                    check_out = datetime.combine(date.today(), record.check_out_time)
-                    hours = (check_out - check_in).total_seconds() / 3600.0
-                    if hours < 0:
-                        hours += 24 # overnight shift handle
-                    total_hours += hours
-                else:
-                    # If just present but missing times, assume 8 hours
-                    total_hours += 8.0
-                    
-            total_pay = total_hours * hourly_rate
+            att_days = len(set(r.date for r in emp_records))
+            dearness = float(emp.dearness) if emp else 0.0
+            allowance = float(emp.allowance) if emp else 0.0
+            per_day = base_salary / 30.0 if base_salary else 0.0
+            total_gross = (att_days * per_day) + dearness + allowance
+            sst = total_gross * 0.01
+            rem_tax = 0.0
+            total_tds = sst + rem_tax
+            net_payable = total_gross - total_tds
             
             payroll_data.append({
                 'employee_name': u.full_name,
                 'position': u.position,
-                'total_hours': round(total_hours, 2),
-                'hourly_rate': round(hourly_rate, 2),
-                'total_pay': round(total_pay, 2),
+                'att_days': att_days,
                 'base_salary': round(base_salary, 2),
+                'dearness': dearness,
+                'allowance': allowance,
+                'per_day': round(per_day, 2),
+                'total_gross': round(total_gross, 2),
+                'sst': round(sst, 2),
+                'rem_tax': round(rem_tax, 2),
+                'total_tds': round(total_tds, 2),
+                'net_payable': round(net_payable, 2),
                 'records': emp_records.order_by('date')
             })
             
@@ -1602,25 +1833,27 @@ class StaffPayrollReportView(TemplateView):
         if not any(pd['employee_name'] == 'John Doe' for pd in payroll_data):
             john_records = AttendanceRecord.objects.filter(employee_name='John Doe', status='Present')
             if john_records.exists():
-                john_hours = 0.0
-                for record in john_records:
-                    if record.check_in_time and record.check_out_time:
-                        check_in = datetime.combine(date.today(), record.check_in_time)
-                        check_out = datetime.combine(date.today(), record.check_out_time)
-                        hours = (check_out - check_in).total_seconds() / 3600.0
-                        if hours < 0:
-                            hours += 24
-                        john_hours += hours
-                    else:
-                        john_hours += 8.0
-                hourly_rate = 50000.0 / 160.0
+                john_days = len(set(r.date for r in john_records))
+                j_base = 50000.0
+                j_per_day = j_base / 30.0
+                j_gross = john_days * j_per_day
+                j_sst = j_gross * 0.01
+                j_tds = j_sst
+                j_net = j_gross - j_tds
+                
                 payroll_data.append({
                     'employee_name': 'John Doe',
                     'position': 'Staff',
-                    'total_hours': round(john_hours, 2),
-                    'hourly_rate': round(hourly_rate, 2),
-                    'total_pay': round(john_hours * hourly_rate, 2),
-                    'base_salary': 50000.0,
+                    'att_days': john_days,
+                    'base_salary': j_base,
+                    'dearness': 0.0,
+                    'allowance': 0.0,
+                    'per_day': round(j_per_day, 2),
+                    'total_gross': round(j_gross, 2),
+                    'sst': round(j_sst, 2),
+                    'rem_tax': 0.0,
+                    'total_tds': round(j_tds, 2),
+                    'net_payable': round(j_net, 2),
                     'records': john_records.order_by('date')
                 })
 
@@ -1659,7 +1892,7 @@ class StaffPayrollReportView(TemplateView):
     def post(self, request, *args, **kwargs):
         from .models import EmployeeProfile, SystemUserProfile, OrgNode
         active_role = request.session.get('active_role', '').upper()
-        allowed_roles = ['CEO', 'COO', 'HR', 'OPERATION HEAD', 'HR AND OPERATION HEAD']
+        allowed_roles = ['CEO', 'COO', 'HR AND OPERATION HEAD']
         
         if active_role not in allowed_roles:
             messages.error(request, "Access Denied: You do not have permission to edit payroll.")
@@ -1669,13 +1902,19 @@ class StaffPayrollReportView(TemplateView):
         if action == 'update_salary':
             employee_name = request.POST.get('employee_name')
             new_salary = request.POST.get('new_salary')
+            new_dearness = request.POST.get('dearness', 0.0)
+            new_allowance = request.POST.get('allowance', 0.0)
             
             try:
                 new_salary = float(new_salary)
+                new_dearness = float(new_dearness)
+                new_allowance = float(new_allowance)
                 first_name = employee_name.split(' ')[0]
                 emp = EmployeeProfile.objects.filter(first_name__icontains=first_name).first()
                 if emp:
                     emp.base_gross_salary = new_salary
+                    emp.dearness = new_dearness
+                    emp.allowance = new_allowance
                     emp.save()
                 else:
                     # Create one if doesn't exist to bind the salary
@@ -1686,11 +1925,13 @@ class StaffPayrollReportView(TemplateView):
                         first_name=first_name,
                         last_name=last_name,
                         node=default_node,
-                        base_gross_salary=new_salary
+                        base_gross_salary=new_salary,
+                        dearness=new_dearness,
+                        allowance=new_allowance
                     )
-                messages.success(request, f"Salary for {employee_name} updated successfully to NPR {new_salary:,.2f}.")
+                messages.success(request, f"Payroll for {employee_name} updated successfully.")
             except ValueError:
-                messages.error(request, "Invalid salary amount provided.")
+                messages.error(request, "Invalid amounts provided.")
                 
         return redirect('attendance_payroll_report')
 
@@ -1699,13 +1940,47 @@ class SystemLogView(TemplateView):
 
     def get(self, request, *args, **kwargs):
         active_role = request.session.get('active_role', '')
-        if active_role.upper() not in ['COO', 'HR', 'OPERATION HEAD', 'HR AND OPERATION HEAD', 'CEO', 'ADMIN', 'SYSTEM ADMIN', 'CITO']:
+        if active_role.upper() not in ['COO', 'HR', 'OPERATION HEAD', 'HR AND OPERATION HEAD', 'CEO', 'ADMIN', 'SYSTEM ADMIN', 'CITO', 'CHAIRMAN', 'OPERATION']:
             messages.error(request, "Access Denied: You do not have permission to view System Logs.")
             return redirect('dashboard')
             
         from .models import SystemLog
-        logs = SystemLog.objects.all().order_by('-timestamp')
+        from django.core.paginator import Paginator
+        
+        log_list = SystemLog.objects.all().order_by('-timestamp')
+        paginator = Paginator(log_list, 25)
+        page_number = request.GET.get('page')
+        logs = paginator.get_page(page_number)
+        
         return render(request, self.template_name, {'logs': logs})
+
+class SystemLogExcelView(View):
+    def get(self, request, *args, **kwargs):
+        active_role = request.session.get('active_role', '')
+        if active_role.upper() not in ['COO', 'HR', 'OPERATION HEAD', 'HR AND OPERATION HEAD', 'CEO', 'ADMIN', 'SYSTEM ADMIN', 'CITO', 'CHAIRMAN', 'OPERATION']:
+            messages.error(request, "Access Denied: You do not have permission to download System Logs.")
+            return redirect('dashboard')
+            
+        from .models import SystemLog
+        import csv
+        from django.http import HttpResponse
+        
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="system_logs.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow(['Timestamp', 'User', 'Action', 'Details'])
+        
+        logs = SystemLog.objects.all().order_by('-timestamp')
+        for log in logs:
+            writer.writerow([
+                log.timestamp.strftime("%b %d, %Y %H:%M") if log.timestamp else 'N/A',
+                log.user_name,
+                log.action,
+                log.details
+            ])
+            
+        return response
 
 class ProjectTaskBoardView(TemplateView):
     template_name = "task_board.html"
@@ -1713,8 +1988,21 @@ class ProjectTaskBoardView(TemplateView):
     def get(self, request, *args, **kwargs):
         from .models import ProjectTask, SystemUserProfile
         
-        # Get all tasks
+        active_role = request.session.get('active_role', '').upper()
+        logged_in_name = request.session.get('logged_in_name', '')
+        management_roles = ['CEO', 'COO', 'HR AND OPERATION HEAD', 'HR', 'OPERATION HEAD', 'CITO', 'CSO', 'ADMIN', 'SYSTEM ADMIN']
+        is_management = active_role in management_roles
+        
         tasks = ProjectTask.objects.all().order_by('-created_at')
+        view_user_name = request.GET.get('view_user_name', '')
+        
+        if is_management:
+            if view_user_name:
+                tasks = tasks.filter(assigned_to__full_name=view_user_name)
+        else:
+            # Normal users can only see tasks assigned to them
+            tasks = tasks.filter(assigned_to__full_name=logged_in_name)
+            
         total_tasks = tasks.count()
         
         # Group tasks by status
@@ -1746,7 +2034,9 @@ class ProjectTaskBoardView(TemplateView):
             'kanban_data': kanban_data,
             'metrics': metrics,
             'users': users,
-            'today': date.today().strftime('%Y-%m-%d')
+            'today': date.today().strftime('%Y-%m-%d'),
+            'is_management': is_management,
+            'view_user_name': view_user_name
         }
         return render(request, self.template_name, context)
 
@@ -1771,6 +2061,16 @@ class ProjectTaskBoardView(TemplateView):
             if logged_in_name:
                 assigned_by = SystemUserProfile.objects.filter(full_name=logged_in_name).first()
                 
+            if due_date:
+                try:
+                    import nepali_datetime
+                    parts = due_date.split('-')
+                    if len(parts) == 3:
+                        np_date = nepali_datetime.date(int(parts[0]), int(parts[1]), int(parts[2]))
+                        due_date = np_date.to_datetime_date()
+                except Exception:
+                    pass
+                    
             task = ProjectTask.objects.create(
                 title=title,
                 description=description,

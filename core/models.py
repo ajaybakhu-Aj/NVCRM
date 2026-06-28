@@ -25,6 +25,8 @@ class InventoryLedger(models.Model):
     stock_record_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     sku_id = models.CharField(max_length=100)
     product_name = models.CharField(max_length=255, default="NV-CCTV Dome Camera (Default)")
+    category = models.CharField(max_length=100, default="Electronics")
+    uom = models.CharField(max_length=50, default="Pcs")
     price = models.DecimalField(max_digits=12, decimal_places=2, default=5000.00)
     product_image = models.FileField(upload_to='products/', null=True, blank=True)
     node_id = models.ForeignKey(OrgNode, on_delete=models.CASCADE, related_name='inventory')
@@ -78,6 +80,7 @@ class LeadCRM(models.Model):
     address = models.CharField(max_length=255, blank=True, null=True)
     deal_value = models.DecimalField(max_digits=12, decimal_places=2, default=0.0)
     product_inquiry = models.CharField(max_length=255, blank=True, null=True)
+    remarks = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
 class EmployeeProfile(models.Model):
@@ -86,6 +89,8 @@ class EmployeeProfile(models.Model):
     node = models.ForeignKey(OrgNode, on_delete=models.CASCADE)
     marital_status = models.BooleanField(default=False, help_text="True=Married, False=Single")
     base_gross_salary = models.DecimalField(max_digits=12, decimal_places=2, default=0.0)
+    dearness = models.DecimalField(max_digits=12, decimal_places=2, default=0.0)
+    allowance = models.DecimalField(max_digits=12, decimal_places=2, default=0.0)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
@@ -202,6 +207,7 @@ class SystemUserProfile(models.Model):
     pan_number = models.CharField(max_length=50, blank=True, null=True)
     citizenship_number = models.CharField(max_length=50, blank=True, null=True)
     contact_number = models.CharField(max_length=50, blank=True, null=True)
+    emergency_contact_number = models.CharField(max_length=50, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     address = models.CharField(max_length=255, blank=True, null=True)
     
@@ -235,7 +241,9 @@ class SystemUserProfile(models.Model):
     can_access_accounts_receivable = models.BooleanField(default=False)
     can_access_pos = models.BooleanField(default=False)
     can_access_procurement = models.BooleanField(default=False)
-    
+    can_access_task_board = models.BooleanField(default=False)
+    can_access_staff_payroll = models.BooleanField(default=False)
+    can_access_system_log = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
@@ -249,6 +257,15 @@ class SystemUserProfile(models.Model):
 
     def __str__(self):
         return f"{self.full_name} ({self.position})"
+
+class StaffDocument(models.Model):
+    user = models.ForeignKey(SystemUserProfile, on_delete=models.CASCADE, related_name='documents')
+    title = models.CharField(max_length=255)
+    file = models.FileField(upload_to='staff_documents/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.user.full_name} - {self.title}"
 
 class Notice(models.Model):
     PRIORITY_CHOICES = [

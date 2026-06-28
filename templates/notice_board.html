@@ -29,13 +29,23 @@
                     <p class="text-[12px] text-on-surface-variant font-data-mono mt-1">Posted by: {{ notice.author_name }} &bull; {{ notice.created_at|timesince }} ago</p>
                 </div>
             </div>
-            {% if notice.priority == 'High Priority' %}
-            <span class="px-2 py-0.5 rounded bg-error-container text-on-error-container text-[10px] font-bold uppercase tracking-widest border border-error">{{ notice.priority }}</span>
-            {% elif notice.priority == 'Information' %}
-            <span class="px-2 py-0.5 rounded bg-surface-variant text-on-surface-variant text-[10px] font-bold uppercase tracking-widest border border-outline">{{ notice.priority }}</span>
-            {% else %}
-            <span class="px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container text-[10px] font-bold uppercase tracking-widest">{{ notice.priority }}</span>
-            {% endif %}
+            <div class="flex items-center gap-3">
+                {% if notice.priority == 'High Priority' %}
+                <span class="px-2 py-0.5 rounded bg-error-container text-on-error-container text-[10px] font-bold uppercase tracking-widest border border-error">{{ notice.priority }}</span>
+                {% elif notice.priority == 'Information' %}
+                <span class="px-2 py-0.5 rounded bg-surface-variant text-on-surface-variant text-[10px] font-bold uppercase tracking-widest border border-outline">{{ notice.priority }}</span>
+                {% else %}
+                <span class="px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container text-[10px] font-bold uppercase tracking-widest">{{ notice.priority }}</span>
+                {% endif %}
+                
+                {% if can_delete %}
+                <form method="POST" action="{% url 'notice_board' %}" class="m-0 p-0 flex items-center" onsubmit="return confirm('Are you sure you want to delete this notice?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="delete_notice_id" value="{{ notice.id }}">
+                    <button type="submit" class="material-symbols-outlined text-outline hover:text-error transition-colors text-[20px]" title="Delete Notice">delete</button>
+                </form>
+                {% endif %}
+            </div>
         </div>
         <p class="text-body-md text-on-surface-variant line-clamp-2">
             {{ notice.content }}

@@ -21,8 +21,6 @@ from django.conf.urls.static import static
 from django.views.generic import RedirectView
 
 urlpatterns = [
-    path('admin/login/', RedirectView.as_view(url='/login/')),
-    path('admin/logout/', RedirectView.as_view(url='/logout/')),
     path('admin/', admin.site.urls),
     path('', include('core.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

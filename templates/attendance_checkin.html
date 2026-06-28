@@ -182,6 +182,19 @@
         
         <!-- Month navigation & Filter -->
         <div class="flex flex-col md:flex-row items-end md:items-center gap-4">
+            {% if can_view_all %}
+            <!-- User Selector for Executives -->
+            <form method="GET" action="" class="flex items-center">
+                <input type="hidden" name="year" value="{{ year }}">
+                <input type="hidden" name="month" value="{{ month }}">
+                <select name="view_user_name" onchange="this.form.submit()" class="bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded-lg focus:outline-none focus:border-primary-fixed text-xs font-data-mono w-48">
+                    {% for user in all_users %}
+                    <option value="{{ user.full_name }}" {% if user.full_name == view_user_name %}selected{% endif %}>{{ user.full_name }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+            {% endif %}
+
             <!-- Nepali Date Picker Filter -->
             <div class="relative w-48 z-40">
                 <input type="text" id="nepali-datepicker" placeholder="Jump to Nepali Date" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 pr-10 rounded-lg focus:outline-none focus:border-primary-fixed cursor-text text-xs font-data-mono">
@@ -189,9 +202,9 @@
             </div>
 
             <div class="flex items-center gap-4 bg-surface-container-lowest border border-outline-variant px-4 py-2 rounded-lg">
-                <a href="?year={{ prev_year }}&month={{ prev_month }}" class="material-symbols-outlined text-on-surface hover:text-primary transition-colors text-sm">chevron_left</a>
+                <a href="?year={{ prev_year }}&month={{ prev_month }}&view_user_name={{ view_user_name|urlencode }}" class="material-symbols-outlined text-on-surface hover:text-primary transition-colors text-sm">chevron_left</a>
                 <span class="font-semibold text-on-surface uppercase tracking-wider text-xs font-data-mono">{{ month_name }} {{ year }}</span>
-                <a href="?year={{ next_year }}&month={{ next_month }}" class="material-symbols-outlined text-on-surface hover:text-primary transition-colors text-sm">chevron_right</a>
+                <a href="?year={{ next_year }}&month={{ next_month }}&view_user_name={{ view_user_name|urlencode }}" class="material-symbols-outlined text-on-surface hover:text-primary transition-colors text-sm">chevron_right</a>
             </div>
         </div>
     </div>
@@ -507,6 +520,7 @@
         formData.append('latitude', lat);
         formData.append('longitude', lng);
         formData.append('csrfmiddlewaretoken', csrfToken);
+        formData.append('check_type', IS_CHECKED_IN ? 'out' : 'in');
 
         fetch('', {
             method: 'POST',

@@ -40,6 +40,7 @@ def pending_approvals(request):
         'pending_leaves_count': pending_leaves,
         'pending_procurements_count': procurement_count,
         'system_user': system_user,
+        'active_role_upper': active_role.upper() if active_role else '',
         'unread_notifications': unread_notifications,
         'unread_notifications_count': len(unread_notifications) if system_user else 0
     }

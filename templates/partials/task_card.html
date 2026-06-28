@@ -43,9 +43,10 @@
                 {% endif %}
                 
                 {% if task.due_date %}
+                    {% load nepali_filters %}
                     <span class="text-[9px] font-data-mono flex items-center gap-1 {% if task.due_date|date:'Y-m-d' < today and task.status != 'DONE' %}text-error font-bold{% else %}text-outline{% endif %}">
                         <span class="material-symbols-outlined text-[10px]">calendar_today</span>
-                        {{ task.due_date|date:"M d" }}
+                        {{ task.due_date|to_nepali_date:"%B %d" }}
                     </span>
                 {% endif %}
             </div>

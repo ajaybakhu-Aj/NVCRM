@@ -8,8 +8,12 @@
         <p class="text-on-surface-variant font-body-md mt-1">CRM Deal and Lead tracking through structured pipeline stages.</p>
     </div>
     <div class="flex gap-2">
-        <button onclick="openLeadModal()" class="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-bold text-label-bold flex items-center gap-2 hover:scale-95 transition-transform cursor-pointer">
-            <span class="material-symbols-outlined text-lg">person_add</span>
+        <a href="{% url 'lead_report_excel' %}" hx-boost="false" target="_blank" class="bg-success-container/20 text-success border border-success/30 px-3 py-2 rounded-lg font-label-bold text-[10px] flex items-center gap-1.5 hover:bg-success-container/40 transition-colors cursor-pointer tracking-wider">
+            <span class="material-symbols-outlined text-[16px]">table</span>
+            EXCEL
+        </a>
+        <button onclick="openLeadModal()" class="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-bold text-[10px] tracking-wider flex items-center gap-2 hover:scale-95 transition-transform cursor-pointer ml-2">
+            <span class="material-symbols-outlined text-[16px]">person_add</span>
             ADD NEW LEAD
         </button>
     </div>
@@ -190,6 +194,11 @@
                 <div>
                     <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Estimated Deal Value (Rs.)</label>
                     <input type="number" name="deal_value" placeholder="e.g. 500000" min="0" step="1000" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Final Remarks</label>
+                    <textarea name="remarks" placeholder="Enter remarks about the lead..." rows="2" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded"></textarea>
                 </div>
             </div>
 

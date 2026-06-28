@@ -50,6 +50,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.SystemLogMiddleware',
     'core.middleware.AuthRequiredMiddleware',
+    'core.middleware.PageAccessMiddleware',
 ]
 
 ROOT_URLCONF = 'crm_erp.urls'

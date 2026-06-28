@@ -70,7 +70,7 @@
 </div>
 
 <!-- Main Modules Container -->
-<div class="grid grid-cols-1 xl:grid-cols-2 gap-8 print:hidden">
+<div class="grid grid-cols-1 gap-8 print:hidden">
     
     <!-- Left Column: Payroll Summary Table -->
     <section class="flex flex-col gap-4">
@@ -81,54 +81,61 @@
         
         <div class="bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-lg flex-1">
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
+                <table class="w-full text-left border-collapse whitespace-nowrap">
                     <thead class="bg-surface-container-low border-b border-outline-variant">
                         <tr>
-                            <th class="px-6 py-4 text-[10px] font-label-caps text-outline uppercase tracking-widest">Target Asset</th>
-                            <th class="px-6 py-4 text-[10px] font-label-caps text-outline uppercase tracking-widest text-right">Work Hours</th>
-                            <th class="px-6 py-4 text-[10px] font-label-caps text-outline uppercase tracking-widest text-right">Base / Hr</th>
-                            <th class="px-6 py-4 text-[10px] font-label-caps text-outline uppercase tracking-widest text-right">Total Payout</th>
+                            <th rowspan="2" class="px-3 py-3 text-[10px] font-label-caps text-outline uppercase tracking-widest border-r border-outline-variant/30">S.No.</th>
+                            <th rowspan="2" class="px-3 py-3 text-[10px] font-label-caps text-outline uppercase tracking-widest border-r border-outline-variant/30">Name of Staffs</th>
+                            <th rowspan="2" class="px-3 py-3 text-[10px] font-label-caps text-outline uppercase tracking-widest border-r border-outline-variant/30">Position</th>
+                            <th rowspan="2" class="px-3 py-3 text-[10px] font-label-caps text-outline uppercase tracking-widest border-r border-outline-variant/30 text-right">Att. Day</th>
+                            <th rowspan="2" class="px-3 py-3 text-[10px] font-label-caps text-on-primary-container bg-primary-container/20 uppercase tracking-widest border-r border-outline-variant/30 text-right">Basic Salary</th>
+                            <th rowspan="2" class="px-3 py-3 text-[10px] font-label-caps text-on-primary-container bg-primary-container/20 uppercase tracking-widest border-r border-outline-variant/30 text-right">Dearness</th>
+                            <th rowspan="2" class="px-3 py-3 text-[10px] font-label-caps text-on-primary-container bg-primary-container/20 uppercase tracking-widest border-r border-outline-variant/30 text-right">Allowance</th>
+                            <th rowspan="2" class="px-3 py-3 text-[10px] font-label-caps text-on-primary-container bg-primary-container/20 uppercase tracking-widest border-r border-outline-variant/30 text-right">Per Day</th>
+                            <th rowspan="2" class="px-3 py-3 text-[10px] font-label-caps text-outline uppercase tracking-widest border-r border-outline-variant/30 text-right">Total Gross Salary</th>
+                            <th colspan="3" class="px-3 py-2 text-[10px] font-label-caps text-outline uppercase tracking-widest border-b border-r border-outline-variant/30 text-center">Monthly TDS</th>
+                            <th rowspan="2" class="px-3 py-3 text-[10px] font-label-caps text-outline uppercase tracking-widest text-right">Monthly Net Payable</th>
+                        </tr>
+                        <tr>
+                            <th class="px-3 py-2 text-[10px] font-label-caps text-outline uppercase tracking-widest border-r border-outline-variant/30 text-right">1% SST</th>
+                            <th class="px-3 py-2 text-[10px] font-label-caps text-outline uppercase tracking-widest border-r border-outline-variant/30 text-right">Remuneration Tax</th>
+                            <th class="px-3 py-2 text-[10px] font-label-caps text-outline uppercase tracking-widest border-r border-outline-variant/30 text-right">Total TDS</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-outline-variant/30">
                         {% for pay in payroll_data %}
-                        <tr class="hover:bg-surface-container-high transition-colors group">
-                            <td class="px-6 py-4">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded bg-surface-container-highest border border-outline-variant flex items-center justify-center text-primary font-bold text-xs">
+                        <tr class="hover:bg-surface-container-high transition-colors group text-xs text-on-surface">
+                            <td class="px-3 py-3 border-r border-outline-variant/30 font-data-mono">{{ forloop.counter }}</td>
+                            <td class="px-3 py-3 border-r border-outline-variant/30 font-semibold">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded bg-surface-container-highest flex items-center justify-center text-primary font-bold text-[10px]">
                                         {{ pay.employee_name|make_list|first }}
                                     </div>
-                                    <div>
-                                        <p class="font-semibold text-sm text-on-surface">{{ pay.employee_name }}</p>
-                                        <p class="text-[10px] text-on-surface-variant uppercase tracking-wider mt-0.5">{{ pay.position }}</p>
-                                    </div>
+                                    {{ pay.employee_name }}
                                 </div>
                             </td>
-                            <td class="px-6 py-4 text-right">
-                                <span class="font-data-mono text-primary text-sm font-semibold">{{ pay.total_hours }} h</span>
+                            <td class="px-3 py-3 border-r border-outline-variant/30">{{ pay.position }}</td>
+                            <td class="px-3 py-3 border-r border-outline-variant/30 text-right font-data-mono">{{ pay.att_days }}</td>
+                            <td class="px-3 py-3 border-r border-outline-variant/30 text-right font-data-mono bg-primary-container/5 relative group-hover:bg-primary-container/10">
+                                {{ pay.base_salary|floatformat:2 }}
+                                {% if active_role_upper in 'CEO,COO,HR AND OPERATION HEAD' %}
+                                <button onclick="openSalaryModal('{{ pay.employee_name|escapejs }}', '{{ pay.base_salary|floatformat:0 }}', '{% if pay.dearness %}{{ pay.dearness|floatformat:0 }}{% else %}0{% endif %}', '{% if pay.allowance %}{{ pay.allowance|floatformat:0 }}{% else %}0{% endif %}')" class="absolute top-1/2 -translate-y-1/2 left-1 opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:bg-primary/20 rounded p-0.5" title="Edit Salary">
+                                    <span class="material-symbols-outlined text-[12px]">edit</span>
+                                </button>
+                                {% endif %}
                             </td>
-                            <td class="px-6 py-4 text-right">
-                                <div class="flex flex-col items-end">
-                                    <span class="font-data-mono text-on-surface text-xs">NPR {{ pay.hourly_rate|floatformat:2 }}</span>
-                                    <div class="flex items-center gap-1 mt-0.5">
-                                        <span class="text-[9px] text-outline border border-outline-variant rounded px-1">{{ pay.base_salary|floatformat:0 }} Base</span>
-                                        {% if request.session.active_role == 'CEO' or request.session.active_role == 'COO' or request.session.active_role == 'HR' or request.session.active_role == 'OPERATION HEAD' or request.session.active_role == 'HR AND OPERATION HEAD' %}
-                                        <button onclick="openSalaryModal('{{ pay.employee_name|escapejs }}', '{{ pay.base_salary|floatformat:0 }}')" class="opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:bg-primary/10 rounded-full p-0.5">
-                                            <span class="material-symbols-outlined text-[10px]">edit</span>
-                                        </button>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 text-right">
-                                <span class="font-data-mono text-primary text-base font-bold bg-primary/10 px-2 py-1 rounded border border-primary/20">
-                                    NPR {{ pay.total_pay|floatformat:2 }}
-                                </span>
-                            </td>
+                            <td class="px-3 py-3 border-r border-outline-variant/30 text-right font-data-mono bg-primary-container/5 group-hover:bg-primary-container/10">{% if pay.dearness %}{{ pay.dearness|floatformat:2 }}{% else %}-{% endif %}</td>
+                            <td class="px-3 py-3 border-r border-outline-variant/30 text-right font-data-mono bg-primary-container/5 group-hover:bg-primary-container/10">{% if pay.allowance %}{{ pay.allowance|floatformat:2 }}{% else %}-{% endif %}</td>
+                            <td class="px-3 py-3 border-r border-outline-variant/30 text-right font-data-mono bg-primary-container/5 group-hover:bg-primary-container/10">{{ pay.per_day|floatformat:2 }}</td>
+                            <td class="px-3 py-3 border-r border-outline-variant/30 text-right font-data-mono">{{ pay.total_gross|floatformat:2 }}</td>
+                            <td class="px-3 py-3 border-r border-outline-variant/30 text-right font-data-mono">{{ pay.sst|floatformat:2 }}</td>
+                            <td class="px-3 py-3 border-r border-outline-variant/30 text-right font-data-mono">{% if pay.rem_tax %}{{ pay.rem_tax|floatformat:2 }}{% else %}-{% endif %}</td>
+                            <td class="px-3 py-3 border-r border-outline-variant/30 text-right font-data-mono">{{ pay.total_tds|floatformat:2 }}</td>
+                            <td class="px-3 py-3 text-right font-data-mono font-bold text-primary">{{ pay.net_payable|floatformat:2 }}</td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="4" class="px-6 py-12 text-center text-on-surface-variant">
+                            <td colspan="13" class="px-6 py-12 text-center text-on-surface-variant">
                                 <span class="material-symbols-outlined text-4xl opacity-30 mb-2 block">folder_off</span>
                                 <p class="text-sm">No payroll data extracted.</p>
                             </td>
@@ -324,9 +331,19 @@
                 <div class="w-full bg-surface-container-highest border border-outline-variant rounded-lg px-4 py-3 text-on-surface font-semibold" id="modalEmployeeNameDisplay"></div>
             </div>
             
-            <div class="mb-6">
+            <div class="mb-4">
                 <label class="block font-label-md text-on-surface-variant mb-2">New Base Gross Salary (NPR)</label>
                 <input type="number" step="0.01" name="new_salary" id="modalNewSalary" required class="w-full bg-surface border border-outline focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-4 py-3 text-on-surface transition-colors font-data-mono">
+            </div>
+
+            <div class="mb-4">
+                <label class="block font-label-md text-on-surface-variant mb-2">Dearness (NPR)</label>
+                <input type="number" step="0.01" name="dearness" id="modalDearness" value="0.00" class="w-full bg-surface border border-outline focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-4 py-3 text-on-surface transition-colors font-data-mono">
+            </div>
+
+            <div class="mb-6">
+                <label class="block font-label-md text-on-surface-variant mb-2">Allowance (NPR)</label>
+                <input type="number" step="0.01" name="allowance" id="modalAllowance" value="0.00" class="w-full bg-surface border border-outline focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-4 py-3 text-on-surface transition-colors font-data-mono">
             </div>
             
             <div class="flex justify-end gap-3">
@@ -338,12 +355,14 @@
 </div>
 
 <script>
-    function openSalaryModal(employeeName, currentSalary) {
+    function openSalaryModal(employeeName, currentSalary, currentDearness, currentAllowance) {
         document.getElementById('salaryEditModal').classList.remove('hidden');
         document.getElementById('salaryEditModal').classList.add('flex');
         document.getElementById('modalEmployeeName').value = employeeName;
         document.getElementById('modalEmployeeNameDisplay').textContent = employeeName;
         document.getElementById('modalNewSalary').value = currentSalary;
+        document.getElementById('modalDearness').value = currentDearness;
+        document.getElementById('modalAllowance').value = currentAllowance;
     }
     
     function closeSalaryModal() {

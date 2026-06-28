@@ -6,6 +6,12 @@
 {% block page_subtitle %}Review recent administrative actions and changes.{% endblock %}
 
 {% block content %}
+<div class="mb-4 flex justify-end">
+    <a href="{% url 'system_log_excel' %}" class="flex items-center gap-2 bg-success/20 text-success px-4 py-2 rounded-lg font-label-bold text-label-bold hover:bg-success/30 border border-success/30 transition-colors shadow-sm">
+        <span class="material-symbols-outlined text-sm">download</span>
+        DOWNLOAD ALL (EXCEL)
+    </a>
+</div>
 <div class="bg-surface-container border border-outline-variant rounded-xl overflow-hidden">
     <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
@@ -32,6 +38,33 @@
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+    <!-- Pagination Controls -->
+    <div class="px-6 py-4 border-t border-outline-variant bg-surface-container flex items-center justify-between">
+        <span class="text-sm font-label-bold text-on-surface-variant">
+            Page {{ logs.number }} of {{ logs.paginator.num_pages }}
+        </span>
+        <div class="flex items-center gap-2">
+            {% if logs.has_previous %}
+            <a href="?page={{ logs.previous_page_number }}" class="px-4 py-2 bg-surface-container-high hover:bg-surface-variant border border-outline-variant rounded-md text-sm font-label-bold text-on-surface transition-colors flex items-center gap-1 shadow-sm">
+                <span class="material-symbols-outlined text-[16px]">chevron_left</span> Previous
+            </a>
+            {% else %}
+            <span class="px-4 py-2 bg-surface-container-low border border-outline-variant rounded-md text-sm font-label-bold text-outline cursor-not-allowed flex items-center gap-1 opacity-60">
+                <span class="material-symbols-outlined text-[16px]">chevron_left</span> Previous
+            </span>
+            {% endif %}
+
+            {% if logs.has_next %}
+            <a href="?page={{ logs.next_page_number }}" class="px-4 py-2 bg-surface-container-high hover:bg-surface-variant border border-outline-variant rounded-md text-sm font-label-bold text-on-surface transition-colors flex items-center gap-1 shadow-sm">
+                Next <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+            </a>
+            {% else %}
+            <span class="px-4 py-2 bg-surface-container-low border border-outline-variant rounded-md text-sm font-label-bold text-outline cursor-not-allowed flex items-center gap-1 opacity-60">
+                Next <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+            </span>
+            {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}

@@ -1,12 +1,35 @@
 {% extends "base.html" %}
+{% load nepali_filters %}
 
 {% block content %}
+<!-- Nepali Datepicker CDN -->
+<link href="https://nepalidatepicker.sajanmaharjan.com.np/v5/nepali.datepicker/css/nepali.datepicker.v5.0.6.min.css" rel="stylesheet" type="text/css"/>
+<style>
+    /* Ensure the datepicker is above all modals and navs */
+    #ndp-nepali-box {
+        z-index: 9999 !important;
+    }
+</style>
 <div class="flex justify-between items-end mb-6">
     <div>
         <h3 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Project Command Center</h3>
         <p class="text-on-surface-variant font-body-md mt-1">Global Task Allocation & Strategic Kanban Board</p>
     </div>
-    <div>
+    <div class="flex items-center gap-4">
+        {% if is_management %}
+        <form method="GET" action="{% url 'task_board' %}" class="flex items-center gap-2">
+            <select name="view_user_name" onchange="this.form.submit()" class="bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded-lg focus:outline-none focus:border-primary-fixed text-xs font-data-mono w-48">
+                <option value="">-- All Assets Tasks --</option>
+                {% for u in users %}
+                <option value="{{ u.full_name }}" {% if u.full_name == view_user_name %}selected{% endif %}>{{ u.full_name }}</option>
+                {% endfor %}
+            </select>
+        </form>
+        {% endif %}
+        <div class="bg-surface-container-high border border-outline-variant p-1 rounded-lg flex gap-1">
+            <button onclick="setView('kanban')" id="btn-kanban" class="px-3 py-1.5 rounded text-sm font-label-bold transition-colors bg-primary text-on-primary">Kanban</button>
+            <button onclick="setView('list')" id="btn-list" class="px-3 py-1.5 rounded text-sm font-label-bold transition-colors text-on-surface-variant hover:text-on-surface">List</button>
+        </div>
         <button onclick="toggleModal('newTaskModal')" class="flex items-center gap-2 bg-primary text-on-primary hover:brightness-110 transition-colors px-5 py-2.5 rounded-lg font-label-bold text-xs uppercase tracking-widest shadow-[0_0_15px_rgba(220,255,158,0.3)]">
             <span class="material-symbols-outlined text-[18px]">add_task</span>
             Assign New Task
@@ -57,7 +80,7 @@
     </div>
 </div>
 
-<div class="flex gap-6 h-[calc(100vh-280px)] overflow-x-auto pb-4 custom-scrollbar">
+<div id="kanban-view" class="flex gap-6 h-[calc(100vh-280px)] overflow-x-auto pb-4 custom-scrollbar">
     <!-- TODO Column -->
     <div class="flex-shrink-0 w-[350px] bg-surface-container-low border border-outline-variant/50 rounded-xl flex flex-col h-full overflow-hidden">
         <div class="p-4 border-b border-outline-variant/30 bg-surface-container/50 flex justify-between items-center">
@@ -123,6 +146,49 @@
     </div>
 </div>
 
+<!-- LIST VIEW -->
+<div id="list-view" class="hidden h-[calc(100vh-280px)] overflow-y-auto pb-4 custom-scrollbar">
+    <div class="bg-surface-container-low border border-outline-variant rounded-xl overflow-hidden">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-surface-container-highest border-b border-outline-variant">
+                    <th class="p-4 font-label-caps text-xs text-outline tracking-wider uppercase">Task</th>
+                    <th class="p-4 font-label-caps text-xs text-outline tracking-wider uppercase">Priority</th>
+                    <th class="p-4 font-label-caps text-xs text-outline tracking-wider uppercase">Status</th>
+                    <th class="p-4 font-label-caps text-xs text-outline tracking-wider uppercase">Assignee</th>
+                    <th class="p-4 font-label-caps text-xs text-outline tracking-wider uppercase">Due Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for status, tasks in kanban_data.items %}
+                    {% for task in tasks %}
+                    <tr class="border-b border-outline-variant hover:bg-surface-variant/50 transition-colors">
+                        <td class="p-4">
+                            <div class="font-label-bold text-on-surface text-sm">{{ task.title }}</div>
+                            <div class="text-xs text-on-surface-variant mt-1 truncate max-w-md">{{ task.description }}</div>
+                        </td>
+                        <td class="p-4">
+                            {% if task.priority == 'HIGH' or task.priority == 'URGENT' %}
+                                <span class="px-2 py-1 rounded bg-error/20 text-error text-[10px] font-label-bold">{{ task.priority }}</span>
+                            {% elif task.priority == 'MEDIUM' %}
+                                <span class="px-2 py-1 rounded bg-amber-400/20 text-amber-400 text-[10px] font-label-bold">{{ task.priority }}</span>
+                            {% else %}
+                                <span class="px-2 py-1 rounded bg-surface-variant text-on-surface text-[10px] font-label-bold">{{ task.priority }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="p-4">
+                            <span class="text-xs font-label-bold px-2 py-1 border border-outline-variant rounded bg-surface-container">{{ task.status }}</span>
+                        </td>
+                        <td class="p-4 text-sm text-on-surface">{{ task.assigned_to.full_name|default:"Unassigned" }}</td>
+                        <td class="p-4 text-sm text-on-surface-variant">{{ task.due_date|to_nepali_date:"%Y-%m-%d"|default:"No Date" }}</td>
+                    </tr>
+                    {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <!-- Add Task Modal -->
 <div id="newTaskModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
     <div class="bg-surface-container border border-outline-variant p-6 rounded-xl w-full max-w-lg shadow-2xl relative">
@@ -156,8 +222,11 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-[10px] text-outline font-label-caps mb-1 tracking-widest">DEADLINE</label>
-                        <input type="date" name="due_date" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2.5 rounded focus:outline-none focus:border-primary-fixed cursor-pointer">
+                        <label class="block text-[10px] text-outline font-label-caps mb-1 tracking-widest">DEADLINE (Nepali Date)</label>
+                        <div class="relative w-full z-40">
+                            <input type="text" id="nepali-datepicker" name="due_date" placeholder="YYYY-MM-DD" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2.5 pr-10 rounded focus:outline-none focus:border-primary-fixed cursor-text">
+                            <span onclick="document.getElementById('nepali-datepicker').focus()" class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant cursor-pointer hover:text-primary text-[18px]">calendar_month</span>
+                        </div>
                     </div>
                 </div>
 
@@ -200,6 +269,28 @@
 <script>
     function toggleModal(modalId) {
         document.getElementById(modalId).classList.toggle('hidden');
+    }
+
+    function setView(view) {
+        if(view === 'kanban') {
+            document.getElementById('kanban-view').classList.remove('hidden');
+            document.getElementById('kanban-view').classList.add('flex');
+            document.getElementById('list-view').classList.add('hidden');
+            
+            document.getElementById('btn-kanban').classList.add('bg-primary', 'text-on-primary');
+            document.getElementById('btn-kanban').classList.remove('text-on-surface-variant', 'hover:text-on-surface');
+            document.getElementById('btn-list').classList.remove('bg-primary', 'text-on-primary');
+            document.getElementById('btn-list').classList.add('text-on-surface-variant', 'hover:text-on-surface');
+        } else {
+            document.getElementById('kanban-view').classList.add('hidden');
+            document.getElementById('kanban-view').classList.remove('flex');
+            document.getElementById('list-view').classList.remove('hidden');
+            
+            document.getElementById('btn-list').classList.add('bg-primary', 'text-on-primary');
+            document.getElementById('btn-list').classList.remove('text-on-surface-variant', 'hover:text-on-surface');
+            document.getElementById('btn-kanban').classList.remove('bg-primary', 'text-on-primary');
+            document.getElementById('btn-kanban').classList.add('text-on-surface-variant', 'hover:text-on-surface');
+        }
     }
 
     // HTML5 Drag and Drop logic
@@ -249,7 +340,8 @@
             }).then(response => response.json())
               .then(data => {
                   if (data.success) {
-                      // Optionally trigger a subtle success animation on the card
+                      // Reload the page to ensure metrics and lists update live
+                      window.location.reload();
                   }
               }).catch(err => console.error('Error updating task status:', err));
         }
@@ -261,5 +353,19 @@
         }
         document.querySelectorAll('.kanban-column').forEach(c => c.style.backgroundColor = '');
     });
+</script>
+<script src="https://nepalidatepicker.sajanmaharjan.com.np/v5/nepali.datepicker/js/nepali.datepicker.v5.0.6.min.js" type="text/javascript"></script>
+<script type="text/javascript">
+    window.onload = function () {
+        var mainInput = document.getElementById("nepali-datepicker");
+        if (mainInput) {
+            mainInput.NepaliDatePicker({
+                ndpYear: true,
+                ndpMonth: true,
+                ndpYearCount: 20,
+                unicodeDate: false
+            });
+        }
+    };
 </script>
 {% endblock %}
