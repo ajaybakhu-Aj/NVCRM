@@ -465,7 +465,40 @@ class AttendanceCheckinView(TemplateView):
 
     def post(self, request, *args, **kwargs):
         from django.utils import timezone
-        from datetime import time
+        from datetime import time, datetime
+        
+        action = request.POST.get('action')
+        if action == 'missed_attendance':
+            system_user = getattr(request, 'system_user', None)
+            if not system_user:
+                from django.http import JsonResponse
+                return JsonResponse({'success': False, 'message': 'User not found.'})
+                
+            date_str = request.POST.get('date')
+            check_in_str = request.POST.get('check_in_time')
+            check_out_str = request.POST.get('check_out_time')
+            reason = request.POST.get('reason')
+            
+            try:
+                ma_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                in_time = datetime.strptime(check_in_str, '%H:%M').time()
+                out_time = datetime.strptime(check_out_str, '%H:%M').time()
+                
+                from .models import MissedAttendanceRequest
+                MissedAttendanceRequest.objects.create(
+                    employee=system_user,
+                    date=ma_date,
+                    check_in_time=in_time,
+                    check_out_time=out_time,
+                    reason=reason
+                )
+                from django.contrib import messages
+                messages.success(request, 'Missed attendance request submitted successfully.')
+                return redirect('attendance_checkin')
+            except Exception as e:
+                from django.contrib import messages
+                messages.error(request, f'Error submitting request: {str(e)}')
+                return redirect('attendance_checkin')
         
         logged_in_name = request.session.get('logged_in_name', 'John Doe')
         lat_str = request.POST.get('latitude')
@@ -1157,12 +1190,16 @@ class LeaveListView(TemplateView):
         active_role = request.session.get('active_role', '')
         can_approve = active_role.upper() in ['COO', 'HR', 'OPERATION HEAD', 'HR AND OPERATION HEAD', 'CEO', 'ADMIN', 'SYSTEM ADMIN', 'CITO']
 
+        from .models import MissedAttendanceRequest
+        missed_requests = MissedAttendanceRequest.objects.all().order_by('-created_at')
+
         context = {
             'leave_requests': page_obj,
             'balances': balances,
             'leave_types': LeaveRequest.LEAVE_TYPES,
             'can_approve': can_approve,
-            'leave_settings': settings
+            'leave_settings': settings,
+            'missed_requests': missed_requests
         }
         return render(request, self.template_name, context)
 
@@ -1188,6 +1225,47 @@ class LeaveListView(TemplateView):
                     messages.error(request, "Invalid input for leave allowances.")
             else:
                 messages.error(request, "Access Denied: You do not have permission to edit leave settings.")
+            return redirect('leave_list')
+
+        if action in ['approve_missed', 'reject_missed'] and request_id:
+            active_role = request.session.get('active_role', '').upper()
+            if active_role in ['COO', 'HR', 'OPERATION HEAD', 'HR AND OPERATION HEAD', 'CEO', 'ADMIN', 'SYSTEM ADMIN', 'CITO']:
+                from .models import MissedAttendanceRequest, AttendanceRecord
+                try:
+                    ma_req = MissedAttendanceRequest.objects.get(id=request_id)
+                    if action == 'reject_missed':
+                        ma_req.status = 'Rejected'
+                        ma_req.save()
+                        messages.success(request, "Missed attendance request rejected.")
+                    else:
+                        if active_role == 'HR':
+                            ma_req.hr_approved = True
+                        elif active_role in ['OPERATION HEAD', 'HR AND OPERATION HEAD']:
+                            ma_req.operation_approved = True
+                        elif active_role == 'COO':
+                            ma_req.coo_approved = True
+                        elif active_role in ['CEO', 'ADMIN', 'SYSTEM ADMIN']:
+                            ma_req.hr_approved = True
+                            ma_req.operation_approved = True
+                            ma_req.coo_approved = True
+                            
+                        if ma_req.is_fully_approved:
+                            ma_req.status = 'Approved'
+                            AttendanceRecord.objects.update_or_create(
+                                employee_name=ma_req.employee.full_name,
+                                date=ma_req.date,
+                                defaults={
+                                    'check_in_time': ma_req.check_in_time,
+                                    'check_out_time': ma_req.check_out_time,
+                                    'status': 'Present'
+                                }
+                            )
+                        ma_req.save()
+                        messages.success(request, "Missed attendance request approved.")
+                except Exception as e:
+                    messages.error(request, "Error processing missed attendance.")
+            else:
+                messages.error(request, "Access Denied.")
             return redirect('leave_list')
 
         if action in ['approve', 'reject'] and request_id:

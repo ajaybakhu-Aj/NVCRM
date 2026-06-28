@@ -195,6 +195,32 @@ class AttendanceRecord(models.Model):
     def __str__(self):
         return f"{self.employee_name} - {self.date} ({self.status})"
 
+class MissedAttendanceRequest(models.Model):
+    STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('Approved', 'Approved'),
+        ('Rejected', 'Rejected'),
+    ]
+    employee = models.ForeignKey('SystemUserProfile', on_delete=models.CASCADE)
+    date = models.DateField()
+    check_in_time = models.TimeField()
+    check_out_time = models.TimeField()
+    reason = models.TextField()
+    
+    hr_approved = models.BooleanField(default=False)
+    operation_approved = models.BooleanField(default=False)
+    coo_approved = models.BooleanField(default=False)
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.employee.full_name} - Missed Attendance {self.date}"
+    
+    @property
+    def is_fully_approved(self):
+        return self.hr_approved and self.operation_approved and self.coo_approved
+
 class SystemUserProfile(models.Model):
     full_name = models.CharField(max_length=255)
     position = models.CharField(max_length=100)
