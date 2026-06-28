@@ -582,6 +582,26 @@ class InventoryListView(TemplateView):
         from .models import InventoryLedger, OrgNode
         action = request.POST.get('action')
         
+        if action == 'delete':
+            active_role = request.session.get('active_role', '')
+            system_user = getattr(request, 'system_user', None)
+            is_ceo = (active_role == 'CEO') or (system_user and system_user.position == 'CEO')
+            
+            if is_ceo:
+                sku_id = request.POST.get('sku_id')
+                node_name = request.POST.get('node_name')
+                if sku_id and node_name:
+                    InventoryLedger.objects.filter(sku_id=sku_id, node_id__name=node_name).delete()
+                    from django.contrib import messages
+                    messages.success(request, f'Stock details for SKU {sku_id} at {node_name} deleted successfully.')
+                else:
+                    from django.contrib import messages
+                    messages.error(request, 'Missing SKU ID or Location for deletion.')
+            else:
+                from django.contrib import messages
+                messages.error(request, 'Access Denied: Only the CEO can delete stock tracking details.')
+            return redirect('inventory_list')
+        
         if action == 'add_stock':
             sku_id = request.POST.get('sku_id')
             product_name = request.POST.get('product_name')
@@ -1535,7 +1555,7 @@ class AccountsReceivableView(View):
         
         if action == 'delete' and invoice_id:
             system_user = getattr(request, 'system_user', None)
-            is_ceo = (active_role == 'CEO') or (system_user and system_user.role == 'CEO')
+            is_ceo = (active_role == 'CEO') or (system_user and system_user.position == 'CEO')
             
             if is_ceo:
                 AccountsReceivable.objects.filter(id=invoice_id).delete()
