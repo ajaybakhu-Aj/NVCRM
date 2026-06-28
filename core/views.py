@@ -474,20 +474,23 @@ class AttendanceCheckinView(TemplateView):
                 from django.http import JsonResponse
                 return JsonResponse({'success': False, 'message': 'User not found.'})
                 
-            date_str = request.POST.get('date')
+            start_date_str = request.POST.get('start_date')
+            end_date_str = request.POST.get('end_date')
             check_in_str = request.POST.get('check_in_time')
             check_out_str = request.POST.get('check_out_time')
             reason = request.POST.get('reason')
             
             try:
-                ma_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                ma_start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                ma_end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else ma_start_date
                 in_time = datetime.strptime(check_in_str, '%H:%M').time()
                 out_time = datetime.strptime(check_out_str, '%H:%M').time()
                 
                 from .models import MissedAttendanceRequest
                 MissedAttendanceRequest.objects.create(
                     employee=system_user,
-                    date=ma_date,
+                    start_date=ma_start_date,
+                    end_date=ma_end_date,
                     check_in_time=in_time,
                     check_out_time=out_time,
                     reason=reason
@@ -1251,15 +1254,19 @@ class LeaveListView(TemplateView):
                             
                         if ma_req.is_fully_approved:
                             ma_req.status = 'Approved'
-                            AttendanceRecord.objects.update_or_create(
-                                employee_name=ma_req.employee.full_name,
-                                date=ma_req.date,
-                                defaults={
-                                    'check_in_time': ma_req.check_in_time,
-                                    'check_out_time': ma_req.check_out_time,
-                                    'status': 'Present'
-                                }
-                            )
+                            from datetime import timedelta
+                            current_date = ma_req.start_date
+                            while current_date <= ma_req.end_date:
+                                AttendanceRecord.objects.update_or_create(
+                                    employee_name=ma_req.employee.full_name,
+                                    date=current_date,
+                                    defaults={
+                                        'check_in_time': ma_req.check_in_time,
+                                        'check_out_time': ma_req.check_out_time,
+                                        'status': 'Present'
+                                    }
+                                )
+                                current_date += timedelta(days=1)
                         ma_req.save()
                         messages.success(request, "Missed attendance request approved.")
                 except Exception as e:

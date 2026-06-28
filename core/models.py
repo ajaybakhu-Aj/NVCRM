@@ -202,7 +202,8 @@ class MissedAttendanceRequest(models.Model):
         ('Rejected', 'Rejected'),
     ]
     employee = models.ForeignKey('SystemUserProfile', on_delete=models.CASCADE)
-    date = models.DateField()
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
     check_in_time = models.TimeField()
     check_out_time = models.TimeField()
     reason = models.TextField()
@@ -215,7 +216,7 @@ class MissedAttendanceRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.employee.full_name} - Missed Attendance {self.date}"
+        return f"{self.employee.full_name} - Missed Attendance {self.start_date} to {self.end_date}"
     
     @property
     def is_fully_approved(self):

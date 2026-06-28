@@ -602,9 +602,15 @@
             {% csrf_token %}
             <input type="hidden" name="action" value="missed_attendance">
             
-            <div>
-                <label class="block text-[10px] text-outline font-label-caps mb-1">Date</label>
-                <input type="date" name="date" required class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed calendar-white">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps mb-1">Start Date</label>
+                    <input type="date" name="start_date" required class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed calendar-white">
+                </div>
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps mb-1">End Date (Optional)</label>
+                    <input type="date" name="end_date" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-2 rounded focus:outline-none focus:border-primary-fixed calendar-white">
+                </div>
             </div>
             
             <div class="grid grid-cols-2 gap-4">

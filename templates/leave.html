@@ -216,7 +216,12 @@
                             <div class="font-semibold text-primary-fixed">{{ m_req.employee.full_name }}</div>
                             <div class="text-[10px] text-on-surface-variant">{{ m_req.reason }}</div>
                         </td>
-                        <td class="py-4 px-4 font-tabular-numeric">{{ m_req.date|date:"Y-m-d" }}</td>
+                        <td class="py-4 px-4 font-tabular-numeric">
+                            {{ m_req.start_date|date:"M d, Y" }}
+                            {% if m_req.end_date and m_req.start_date != m_req.end_date %}
+                                <br><span class="text-outline text-[10px]">to</span> {{ m_req.end_date|date:"M d, Y" }}
+                            {% endif %}
+                        </td>
                         <td class="py-4 px-4 font-tabular-numeric">{{ m_req.check_in_time|time:"H:i" }} - {{ m_req.check_out_time|time:"H:i" }}</td>
                         <td class="py-4 px-4">
                             <div class="flex gap-1">
