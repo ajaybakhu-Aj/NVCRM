@@ -181,21 +181,13 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div>
                                 <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Position / Role</label>
-                                <input type="text" name="position" value="{{ selected_user.position }}" list="position-list" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded" {% if active_role_upper != 'CEO' and active_role_upper != 'COO' and active_role_upper != 'HR AND OPERATION HEAD' %}readonly title="Only CEO, COO, or HR and Operation Head can change position."{% endif %}>
-                                <datalist id="position-list">
-                                    <option value="CEO">
-                                    <option value="CITO">
-                                    <option value="IT">
-                                    <option value="COO">
-                                    <option value="HR and Operation Head">
-                                    <option value="Admin">
-                                    <option value="CMO">
-                                    <option value="CSO">
-                                    <option value="CTO">
-                                    <option value="Manager">
-                                    <option value="Logistics Manager">
-                                    <option value="Staff">
-                                </datalist>
+                                <select name="position" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none cursor-pointer rounded" onchange="checkNewRole(this)" {% if active_role_upper != 'CEO' and active_role_upper != 'COO' and active_role_upper != 'HR AND OPERATION HEAD' %}disabled title="Only CEO, COO, or HR and Operation Head can change position."{% endif %}>
+                                    {% for pos in distinct_positions %}
+                                        <option value="{{ pos }}" {% if selected_user.position == pos %}selected{% endif %}>{{ pos }}</option>
+                                    {% endfor %}
+                                    <option value="ADD_NEW" class="text-primary font-bold">+ Add New Role</option>
+                                </select>
+                                <input type="text" disabled placeholder="Type new role..." class="new-role-input hidden w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded mt-2">
                             </div>
                             <div>
                                 <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">System Node</label>
@@ -722,21 +714,13 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Position / Role</label>
-                        <input type="text" name="position" list="position-list-create" placeholder="e.g. Graphic Designer" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded" {% if active_role_upper != 'CEO' and active_role_upper != 'COO' and active_role_upper != 'HR AND OPERATION HEAD' %}readonly title="Only CEO, COO, or HR and Operation Head can assign position."{% endif %} required>
-                        <datalist id="position-list-create">
-                            <option value="CEO">
-                            <option value="CITO">
-                            <option value="IT">
-                            <option value="COO">
-                            <option value="HR and Operation Head">
-                            <option value="Admin">
-                            <option value="CMO">
-                            <option value="CSO">
-                            <option value="CTO">
-                            <option value="Manager">
-                            <option value="Logistics Manager">
-                            <option value="Staff">
-                        </datalist>
+                        <select name="position" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none cursor-pointer rounded" onchange="checkNewRole(this)" {% if active_role_upper != 'CEO' and active_role_upper != 'COO' and active_role_upper != 'HR AND OPERATION HEAD' %}disabled title="Only CEO, COO, or HR and Operation Head can assign position."{% endif %} required>
+                            {% for pos in distinct_positions %}
+                                <option value="{{ pos }}">{{ pos }}</option>
+                            {% endfor %}
+                            <option value="ADD_NEW" class="text-primary font-bold">+ Add New Role</option>
+                        </select>
+                        <input type="text" disabled placeholder="Type new role..." class="new-role-input hidden w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded mt-2">
                     </div>
                     <div>
                         <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">System Node</label>
@@ -900,6 +884,23 @@
                 item.style.display = "none";
             }
         });
+    }
+
+    // Custom Role Logic
+    function checkNewRole(selectEl) {
+        var inputEl = selectEl.parentElement.querySelector('.new-role-input');
+        if (selectEl.value === 'ADD_NEW') {
+            selectEl.name = ""; // Remove name so it's not submitted
+            inputEl.name = "position";
+            inputEl.disabled = false;
+            inputEl.classList.remove('hidden');
+            inputEl.focus();
+        } else {
+            selectEl.name = "position";
+            inputEl.name = "";
+            inputEl.disabled = true;
+            inputEl.classList.add('hidden');
+        }
     }
 </script>
 {% endblock scripts %}

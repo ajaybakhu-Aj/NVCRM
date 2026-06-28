@@ -760,11 +760,20 @@ class UserCreateView(TemplateView):
                 can_view_documents = True
                 documents = selected_user.documents.all().order_by('-uploaded_at')
 
+        # Get distinct positions dynamically
+        distinct_positions = list(SystemUserProfile.objects.values_list('position', flat=True).distinct())
+        default_positions = ['CEO', 'CITO', 'IT', 'COO', 'HR and Operation Head', 'Admin', 'CMO', 'CSO', 'CTO', 'Manager', 'Logistics Manager', 'Staff']
+        for p in default_positions:
+            if p not in distinct_positions:
+                distinct_positions.append(p)
+        distinct_positions.sort()
+
         context = {
             'users': users,
             'selected_user': selected_user,
             'can_view_documents': can_view_documents,
             'documents': documents,
+            'distinct_positions': distinct_positions,
         }
         return render(request, self.template_name, context)
 
