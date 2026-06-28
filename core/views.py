@@ -41,7 +41,8 @@ class DashboardView(TemplateView):
     template_name = "dashboard.html"
 
     def get(self, request, *args, **kwargs):
-        now = datetime.now()
+        from django.utils import timezone
+        now = timezone.localtime()
         import nepali_datetime
         from .nepali_calendar import get_nepali_monthdatescalendar
         
@@ -215,11 +216,12 @@ class DashboardView(TemplateView):
         if action == 'check_in_out':
             from .models import AttendanceRecord
             from datetime import date, datetime, time
+            from django.utils import timezone
             logged_in_name = request.session.get('logged_in_name', 'John Doe')
             lat_str = request.POST.get('latitude')
             lng_str = request.POST.get('longitude')
-            today = date.today()
-            now = datetime.now()
+            now = timezone.localtime()
+            today = now.date()
             current_time = now.time()
 
             lat = None
@@ -304,7 +306,8 @@ class AttendanceCheckinView(TemplateView):
         if can_view_all:
             all_users = SystemUserProfile.objects.values('full_name', 'uid')
 
-        today = date.today()
+        from django.utils import timezone
+        today = timezone.localtime().date()
         today_np = nepali_datetime.date.today()
         year = int(request.GET.get('year', today_np.year))
         month = int(request.GET.get('month', today_np.month))
@@ -461,12 +464,17 @@ class AttendanceCheckinView(TemplateView):
         return render(request, self.template_name, context)
 
     def post(self, request, *args, **kwargs):
+        from django.utils import timezone
+        from datetime import time
+        
         logged_in_name = request.session.get('logged_in_name', 'John Doe')
         lat_str = request.POST.get('latitude')
         lng_str = request.POST.get('longitude')
-        today = date.today()
-        now = datetime.now()
+        
+        now = timezone.localtime()
+        today = now.date()
         current_time = now.time()
+
 
         lat = None
         lng = None
@@ -1741,10 +1749,11 @@ class POSCheckoutView(View):
                 payment_method=payment_method
             )
             
+            from django.utils import timezone
             # Save invoice to session for printable page
             request.session['last_invoice'] = {
                 'invoice_id': invoice_num,
-                'date': datetime.now().strftime("%Y-%m-%d %H:%M"),
+                'date': timezone.localtime().strftime("%Y-%m-%d %H:%M"),
                 'customer_name': customer_name,
                 'customer_pan': customer_pan,
                 'customer_phone': customer_phone,
