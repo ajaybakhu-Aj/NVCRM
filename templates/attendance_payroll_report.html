@@ -270,7 +270,7 @@
     <div class="mb-12 break-inside-avoid">
         <div class="bg-surface-container-low border-2 border-outline p-4 rounded mb-4">
             <h3 class="font-headline-md text-xl font-bold text-primary mb-2 uppercase">{{ row.employee_name }}</h3>
-            <div class="grid grid-cols-2 gap-4 text-sm">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div><strong>Position:</strong> {{ row.position }}</div>
                 <div><strong>Base Salary:</strong> NPR {{ row.base_salary|floatformat:2 }}</div>
                 <div><strong>Total Hours:</strong> {{ row.total_hours }}h</div>

@@ -12,7 +12,7 @@
 </style>
 
 <!-- Dashboard Header -->
-<div class="flex justify-between items-end mb-8">
+<div class="flex flex-col md:flex-row md:justify-between items-start md:items-end gap-4 mb-8">
     <div>
         <h3 class="font-headline-lg text-headline-lg text-on-surface">Operations Dashboard</h3>
         <p class="text-on-surface-variant font-body-md mt-1">Unified tactical oversight for HR and Logistics.</p>
@@ -387,7 +387,7 @@
         // Geolocation and Haversine Distance Logic
         const OFFICE_LAT = 27.6773098;
         const OFFICE_LNG = 85.3979076;
-        const GEOFENCE_RADIUS = 50.0; // 50 meters
+        const GEOFENCE_RADIUS = 100.0; // 100 meters
         const checkBtn = document.getElementById('checkActionBtn');
 
         function calculateDistance(lat1, lon1, lat2, lon2) {

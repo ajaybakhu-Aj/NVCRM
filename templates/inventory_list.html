@@ -17,7 +17,7 @@
 
 {% block content %}
 <!-- Dashboard Header for Inventory -->
-<div class="flex justify-between items-end mb-8">
+<div class="flex flex-col md:flex-row md:justify-between items-start md:items-end gap-4 mb-8">
     <div>
         <h3 class="font-headline-lg text-headline-lg text-on-surface">Inventory & Financial Ledger</h3>
         <p class="text-on-surface-variant font-body-md mt-1">Real-time tracking of localized inventory units and accounts receivable.</p>
@@ -148,7 +148,7 @@
                     {% csrf_token %}
                     <input type="hidden" name="action" value="add_stock">
                     
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="col-span-2">
                             <label class="block text-[10px] text-outline font-label-caps mb-1">PRODUCT IMAGE</label>
                             <input type="file" name="product_image" accept="image/*" class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface p-1.5 rounded focus:outline-none focus:border-primary-fixed file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary-container file:text-primary-fixed hover:file:bg-primary/20 transition-all cursor-pointer">

@@ -1013,6 +1013,18 @@ class UserCreateView(TemplateView):
                 user.full_name = request.POST.get('full_name', user.full_name)
                 
                 active_role_upper = request.session.get('active_role', '').upper()
+                
+                # Update UID safely
+                if active_role_upper in ['CEO', 'COO']:
+                    new_uid = request.POST.get('new_uid', '').strip()
+                    if new_uid and new_uid != user.uid:
+                        # Ensure no duplicate
+                        if not SystemUserProfile.objects.filter(uid=new_uid).exists():
+                            user.uid = new_uid
+                            # If self-editing, update session
+                            if request.session.get('logged_in_uid') == uid:
+                                request.session['logged_in_uid'] = new_uid
+
                 if active_role_upper in ['CEO', 'COO', 'HR AND OPERATION HEAD']:
                     user.position = request.POST.get('position', user.position)
                     
@@ -1105,6 +1117,8 @@ class UserCreateView(TemplateView):
                     AttendanceRecord.objects.filter(employee_name=old_name).update(employee_name=user.full_name)
                     LeaveRequest.objects.filter(employee_name=old_name).update(employee_name=user.full_name)
                     
+            if user:
+                return redirect(f'/users/create/?uid={user.uid}')
             return redirect(f'/users/create/?uid={uid}')
 
         elif action == 'delete':
@@ -1593,6 +1607,7 @@ class ProcurementView(View):
     def post(self, request, *args, **kwargs):
         action = request.POST.get('action')
         req_id = request.POST.get('procurement_id')
+        user_uid = request.session.get('logged_in_uid')
 
         if action == 'create':
             title = request.POST.get('title')
@@ -1609,13 +1624,21 @@ class ProcurementView(View):
                         pass
                 ProcurementRequest.objects.create(
                     title=title, track=track, supporting_document=supporting_document,
-                    landing_cost_management=lcm, goods_receive_notes=goods_receive_notes
+                    landing_cost_management=lcm, goods_receive_notes=goods_receive_notes,
+                    submitted_by_uid=user_uid
                 )
         
         elif action == 'approve':
             role = request.POST.get('role')
             if req_id and role:
-                success, msg = ProcurementStateMachine.approve_step(req_id, role)
+                user_role = request.session.get('active_role', '')
+                success, msg = ProcurementStateMachine.approve_step(req_id, role, user_uid, user_role)
+                if not success:
+                    from django.contrib import messages
+                    messages.error(request, msg)
+                else:
+                    from django.contrib import messages
+                    messages.success(request, msg)
         
         elif action == 'delete':
             if req_id:

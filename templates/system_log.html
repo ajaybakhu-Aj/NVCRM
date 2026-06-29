@@ -7,7 +7,7 @@
 
 {% block content %}
 <div class="mb-4 flex justify-end">
-    <a href="{% url 'system_log_excel' %}" class="flex items-center gap-2 bg-success/20 text-success px-4 py-2 rounded-lg font-label-bold text-label-bold hover:bg-success/30 border border-success/30 transition-colors shadow-sm">
+    <a href="{% url 'system_log_excel' %}" hx-boost="false" target="_blank" class="flex items-center gap-2 bg-success/20 text-success px-4 py-2 rounded-lg font-label-bold text-label-bold hover:bg-success/30 border border-success/30 transition-colors shadow-sm">
         <span class="material-symbols-outlined text-sm">download</span>
         DOWNLOAD ALL (EXCEL)
     </a>

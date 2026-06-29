@@ -114,6 +114,13 @@ class ProcurementRequest(models.Model):
     coo_approved = models.BooleanField(default=False)
     ceo_approved = models.BooleanField(default=False)
 
+    # Actor Tracking for Segregation of Duties
+    submitted_by_uid = models.CharField(max_length=100, blank=True, null=True)
+    hr_approver_uid = models.CharField(max_length=100, blank=True, null=True)
+    cto_approver_uid = models.CharField(max_length=100, blank=True, null=True)
+    coo_approver_uid = models.CharField(max_length=100, blank=True, null=True)
+    ceo_approver_uid = models.CharField(max_length=100, blank=True, null=True)
+
     is_terminal = models.BooleanField(default=False)
 
 class CalendarEvent(models.Model):

@@ -16,7 +16,7 @@
 <input type="hidden" id="csrfToken" value="{{ csrf_token }}">
 
 <!-- Dashboard Header for User Provisioning -->
-<div class="flex justify-between items-end mb-8">
+<div class="flex flex-col md:flex-row md:justify-between items-start md:items-end gap-4 mb-8">
     <div class="flex items-center gap-4">
         <h1 class="font-headline-lg text-headline-lg text-primary">User Provisioning</h1>
     </div>
@@ -178,7 +178,11 @@
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<div>
+<label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">UID (Identifier)</label>
+<input type="text" name="new_uid" value="{{ selected_user.uid }}" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded font-data-mono" {% if active_role_upper != 'CEO' and active_role_upper != 'COO' %}readonly title="Only CEO or COO can update UID."{% endif %}>
+</div>
                             <div>
                                 <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Position / Role</label>
                                 <select name="position" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none cursor-pointer rounded" onchange="checkNewRole(this)" {% if active_role_upper != 'CEO' and active_role_upper != 'COO' and active_role_upper != 'HR AND OPERATION HEAD' %}disabled title="Only CEO, COO, or HR and Operation Head can change position."{% endif %}>
@@ -711,7 +715,7 @@
                     </div>
                 </div>
                 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Position / Role</label>
                         <select name="position" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none cursor-pointer rounded" onchange="checkNewRole(this)" {% if active_role_upper != 'CEO' and active_role_upper != 'COO' and active_role_upper != 'HR AND OPERATION HEAD' %}disabled title="Only CEO, COO, or HR and Operation Head can assign position."{% endif %} required>
@@ -735,7 +739,7 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Contact Number</label>
                         <input type="text" name="contact_number" placeholder="+977-9851000000" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded">
@@ -746,7 +750,7 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">PAN Number</label>
                         <input type="text" name="pan_number" placeholder="600000000" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded">
@@ -768,7 +772,7 @@
                         <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider">SYSTEM PERMISSIONS</label>
                         <span class="text-[9px] text-outline font-body-sm italic">Keep off to grant limited access to staff</span>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div class="p-2 bg-surface-container-lowest border border-outline-variant flex items-center justify-between rounded">
                             <span class="text-[9px] font-label-caps text-on-surface">TELEMETRY</span>
                             <button type="button" id="modal-btn-telemetry" class="w-8 h-4 relative rounded-full p-0.5 flex items-center justify-start bg-on-tertiary transition-all" onclick="toggleModalPermission('telemetry')">

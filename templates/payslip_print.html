@@ -50,15 +50,15 @@
     </div>
 
     <!-- Summary Metrics -->
-    <div class="grid grid-cols-2 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div class="force-bg-gray p-4 rounded-lg border force-border">
             <h3 class="text-xs font-bold force-text-gray uppercase tracking-widest mb-3">Workforce Telemetry</h3>
             <div class="flex justify-between mb-2">
-                <span class="text-sm force-text-gray">Total Hours Worked:</span>
-                <span class="text-sm font-mono font-bold force-text-black">{{ employee_data.total_hours }}h</span>
+                <span class="text-sm force-text-gray">Total Days Present:</span>
+                <span class="text-sm font-mono font-bold force-text-black">{{ employee_data.att_days }} Days</span>
             </div>
             <div class="flex justify-between mb-2">
-                <span class="text-sm force-text-gray">Days Logged:</span>
+                <span class="text-sm force-text-gray">Records Logged:</span>
                 <span class="text-sm font-mono font-bold force-text-black">{{ employee_data.records|length }}</span>
             </div>
         </div>
@@ -70,12 +70,20 @@
                 <span class="text-sm font-mono force-text-black">NPR {{ employee_data.base_salary|floatformat:2 }}</span>
             </div>
             <div class="flex justify-between mb-2">
-                <span class="text-sm force-text-gray">Calculated Hourly Rate:</span>
-                <span class="text-sm font-mono force-text-black">NPR {{ employee_data.hourly_rate|floatformat:2 }}</span>
+                <span class="text-sm force-text-gray">Dearness Allowance:</span>
+                <span class="text-sm font-mono force-text-black">NPR {{ employee_data.dearness|floatformat:2 }}</span>
+            </div>
+            <div class="flex justify-between mb-2">
+                <span class="text-sm force-text-gray">Other Allowances:</span>
+                <span class="text-sm font-mono force-text-black">NPR {{ employee_data.allowance|floatformat:2 }}</span>
+            </div>
+            <div class="flex justify-between mb-2 text-red-600" style="color: #dc2626 !important;">
+                <span class="text-sm force-text-gray" style="color: #dc2626 !important;">Total Deductions (TDS):</span>
+                <span class="text-sm font-mono force-text-black" style="color: #dc2626 !important;">- NPR {{ employee_data.total_tds|floatformat:2 }}</span>
             </div>
             <div class="flex justify-between mt-3 pt-3 border-t force-border">
-                <span class="text-sm font-bold force-text-black">Total Net Payout:</span>
-                <span class="text-base font-mono font-bold text-green-700" style="color: #15803d !important;">NPR {{ employee_data.total_pay|floatformat:2 }}</span>
+                <span class="text-sm font-bold force-text-black">Total Payable Amount:</span>
+                <span class="text-base font-mono font-bold text-green-700" style="color: #15803d !important;">NPR {{ employee_data.net_payable|floatformat:2 }}</span>
             </div>
         </div>
     </div>

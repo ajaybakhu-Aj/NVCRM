@@ -2,7 +2,7 @@
 
 {% block content %}
 <!-- Dashboard Header for Notice Board -->
-<div class="flex justify-between items-end mb-8">
+<div class="flex flex-col md:flex-row md:justify-between items-start md:items-end gap-4 mb-8">
     <div>
         <h3 class="font-headline-lg text-headline-lg text-on-surface">Notice Board</h3>
         <p class="text-on-surface-variant font-body-md mt-1">Company wide announcements and updates.</p>
@@ -78,7 +78,7 @@
                 <label class="block text-label-sm font-label-bold text-on-surface mb-1">Notice Title</label>
                 <input type="text" name="title" required class="w-full bg-surface-container px-4 py-2 rounded-lg border border-outline focus:border-primary-fixed focus:outline-none text-on-surface">
             </div>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-label-sm font-label-bold text-on-surface mb-1">Priority</label>
                     <select name="priority" class="w-full bg-surface-container px-4 py-2 rounded-lg border border-outline focus:border-primary-fixed focus:outline-none text-on-surface">
@@ -126,7 +126,7 @@
                 <label class="block text-label-sm font-label-bold text-on-surface mb-1">Notice Title</label>
                 <input type="text" name="title" id="edit_notice_title" required class="w-full bg-surface-container px-4 py-2 rounded-lg border border-outline focus:border-primary-fixed focus:outline-none text-on-surface">
             </div>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-label-sm font-label-bold text-on-surface mb-1">Priority</label>
                     <select name="priority" id="edit_notice_priority" class="w-full bg-surface-container px-4 py-2 rounded-lg border border-outline focus:border-primary-fixed focus:outline-none text-on-surface">
