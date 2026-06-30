@@ -389,12 +389,12 @@
 <!-- Nepali Datepicker JS -->
 <script src="https://nepalidatepicker.sajanmaharjan.com.np/v5/nepali.datepicker/js/nepali.datepicker.v5.0.6.min.js" type="text/javascript"></script>
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
+    (function() {
         var startEl = document.getElementById("leave_start_date");
         var endEl = document.getElementById("leave_end_date");
         if(startEl) startEl.nepaliDatePicker({ ndpYear: true, ndpMonth: true });
         if(endEl) endEl.nepaliDatePicker({ ndpYear: true, ndpMonth: true });
-    });
+    })();
 </script>
 <script>
     function toggleLeaveModal() {
