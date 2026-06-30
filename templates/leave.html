@@ -379,18 +379,37 @@
 <!-- Nepali Datepicker JS -->
 <script src="https://nepalidatepicker.sajanmaharjan.com.np/v5/nepali.datepicker/js/nepali.datepicker.v5.0.6.min.js" type="text/javascript"></script>
 <script>
-    (function initLeaveDP() {
-        var startEl = document.getElementById("leave_start_date");
-        var endEl = document.getElementById("leave_end_date");
-        
-        if (startEl && typeof startEl.nepaliDatePicker === 'undefined') {
-            setTimeout(initLeaveDP, 100);
-            return;
+    (function() {
+        let retries = 0;
+        function initLeaveDP() {
+            var startEl = document.getElementById("leave_start_date");
+            var endEl = document.getElementById("leave_end_date");
+            
+            if (!startEl || typeof startEl.nepaliDatePicker === 'undefined') {
+                retries++;
+                if (retries < 20) {
+                    setTimeout(initLeaveDP, 200);
+                }
+                return;
+            }
+            
+            var dpConfig = { ndpYear: true, ndpMonth: true, container: "body" };
+            if (startEl && !startEl.classList.contains('ndp-initialized')) {
+                startEl.nepaliDatePicker(dpConfig);
+                startEl.classList.add('ndp-initialized');
+            }
+            if (endEl && !endEl.classList.contains('ndp-initialized')) {
+                endEl.nepaliDatePicker(dpConfig);
+                endEl.classList.add('ndp-initialized');
+            }
         }
         
-        var dpConfig = { ndpYear: true, ndpMonth: true, container: "body" };
-        if(startEl) startEl.nepaliDatePicker(dpConfig);
-        if(endEl) endEl.nepaliDatePicker(dpConfig);
+        initLeaveDP();
+        
+        document.body.addEventListener('htmx:load', function() {
+            retries = 0;
+            initLeaveDP();
+        });
     })();
 </script>
 <script>
