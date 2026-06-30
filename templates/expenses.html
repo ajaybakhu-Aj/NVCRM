@@ -165,7 +165,7 @@
             <h3 class="font-headline-sm text-headline-sm text-primary-fixed uppercase tracking-wider">Log New Expense</h3>
             <button onclick="toggleExpenseModal()" class="material-symbols-outlined text-on-surface-variant hover:text-primary">close</button>
         </div>
-        <form method="POST" action="{% url 'account_expenses' %}">
+        <form method="POST" action="{% url 'account_expenses' %}" onsubmit="document.body.style.overflow='';">
             {% csrf_token %}
             <input type="hidden" name="action" value="add_expense">
             
