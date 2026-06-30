@@ -1,4 +1,12 @@
 <div id="task_{{ task.id }}" draggable="true" ondragstart="drag(event)"
+    data-id="TSK-{{ task.id|stringformat:'04d' }}"
+    data-title="{{ task.title|escapejs }}"
+    data-desc="{% if task.description %}{{ task.description|escapejs }}{% endif %}"
+    data-status="{{ task.status }}"
+    data-priority="{{ task.priority }}"
+    data-assignee="{% if task.assigned_to %}{{ task.assigned_to.full_name|escapejs }}{% else %}Unassigned{% endif %}"
+    data-duedate="{% if task.due_date %}{% load nepali_filters %}{{ task.due_date|to_nepali_date:'%B %d, %Y' }}{% else %}Not set{% endif %}"
+    onclick="openTaskDetail(this)"
     class="bg-surface-container-highest border border-outline-variant/50 p-3 rounded-lg shadow-sm cursor-grab active:cursor-grabbing hover:border-primary/50 transition-colors group relative overflow-hidden">
 
     <!-- Priority Bar indicator -->
