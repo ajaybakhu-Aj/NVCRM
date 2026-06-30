@@ -1377,6 +1377,7 @@ class LeaveListView(TemplateView):
             else:
                 messages.error(request, "Access Denied: Only COO, HR, and Operation Head can approve leaves.")
         else:
+            from .models import LeaveRequest
             employee_name = request.session.get('logged_in_name') or request.POST.get('employee_name', 'John Doe')
             leave_type = request.POST.get('leave_type')
             start_date_str = request.POST.get('start_date')
