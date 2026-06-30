@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import account_expenses, export_expenses_excel, DashboardView, AttendanceCheckinView, InventoryListView, UserCreateView, NoticeBoardView, LeaveListView, LeadPipelineView, ProcurementView, AccountsReceivableView, SwitchRoleView, LoginView, LogoutView, POSView, POSCheckoutView, POSInvoiceView, StaffPayrollReportView, ProjectTaskBoardView, SystemLogView, SystemLogExcelView, NoticePollView, LeadReportExcelView
+from .views import account_expenses, export_expenses_excel, DashboardView, AttendanceCheckinView, InventoryListView, UserCreateView, NoticeBoardView, LeaveListView, LeadPipelineView, ProcurementView, AccountsReceivableView, SwitchRoleView, LoginView, LogoutView, POSView, POSCheckoutView, POSInvoiceView, StaffPayrollReportView, ProjectTaskBoardView, SystemLogView, SystemLogExcelView, NoticePollView, LeadReportExcelView, NotificationsView
 
 urlpatterns = [
     path('system-log/', SystemLogView.as_view(), name='system_log'),
@@ -25,4 +25,5 @@ urlpatterns = [
     path('api/poll-notices/', NoticePollView.as_view(), name='poll_notices'),
     path('expenses/', account_expenses, name='account_expenses'),
     path('expenses/export/excel/', export_expenses_excel, name='export_expenses_excel'),
+    path('notifications/', NotificationsView.as_view(), name='notifications'),
 ]

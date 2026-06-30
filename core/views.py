@@ -37,6 +37,20 @@ def handle_remote_checkin_notification(request, lat, lng, employee_name, check_t
                     link='/attendance/'
                 )
 
+def notify_management(message, link):
+    from .models import SystemUserProfile, SystemNotification
+    management_roles = ['CEO', 'COO', 'HR', 'OPERATION HEAD', 'HR AND OPERATION HEAD', 'CITO', 'CTO']
+    managers = [u for u in SystemUserProfile.objects.all() if u.position and u.position.upper() in management_roles]
+    for manager in managers:
+        SystemNotification.objects.create(recipient=manager, message=message, link=link)
+
+def notify_user_by_name(full_name, message, link):
+    if not full_name: return
+    from .models import SystemUserProfile, SystemNotification
+    user = SystemUserProfile.objects.filter(full_name__iexact=full_name).first()
+    if user:
+        SystemNotification.objects.create(recipient=user, message=message, link=link)
+
 class DashboardView(TemplateView):
     template_name = "dashboard.html"
 
@@ -1396,6 +1410,8 @@ class LeaveListView(TemplateView):
                     req = LeaveRequest.objects.get(id=request_id)
                     req.status = 'Approved' if action == 'approve' else 'Rejected'
                     req.save()
+                    notify_management(f"Leave {req.status.lower()} for {req.employee_name} by {user_name}.", "/leave/")
+                    notify_user_by_name(req.employee_name, f"Your leave request has been {req.status.lower()}.", "/leave/")
                     messages.success(request, f"Leave {req.status.lower()} for {req.employee_name}. Notification & Email sent to COO, HR, Operation Head, and Applicant.")
                 except LeaveRequest.DoesNotExist:
                     pass
@@ -1421,6 +1437,7 @@ class LeaveListView(TemplateView):
                         reason=reason,
                         status='Pending'
                     )
+                    notify_management(f"New leave request submitted by {employee_name} ({leave_type}).", "/leave/")
                     messages.success(request, f"Leave requested! Notification & Email sent to COO, HR, and Operation Head.")
                 except Exception as e:
                     messages.error(request, f"Failed to create leave request: {str(e)} (Dates must be YYYY-MM-DD)")
@@ -1653,6 +1670,10 @@ class ProcurementView(View):
                     landing_cost_management=lcm, goods_receive_notes=goods_receive_notes,
                     submitted_by_uid=user_uid
                 )
+                from .models import SystemUserProfile
+                submitter = SystemUserProfile.objects.filter(uid=user_uid).first()
+                submitter_name = submitter.full_name if submitter else "An employee"
+                notify_management(f"New procurement request '{title}' submitted by {submitter_name}.", "/procurement/")
         
         elif action == 'approve':
             role = request.POST.get('role')
@@ -1665,6 +1686,15 @@ class ProcurementView(View):
                 else:
                     from django.contrib import messages
                     messages.success(request, msg)
+                    try:
+                        req = ProcurementRequest.objects.get(id=req_id)
+                        notify_management(f"Procurement '{req.title}' has been signed/approved by {role}.", "/procurement/")
+                        from .models import SystemUserProfile
+                        submitter = SystemUserProfile.objects.filter(uid=req.submitted_by_uid).first()
+                        if submitter:
+                            notify_user_by_name(submitter.full_name, f"Your procurement request '{req.title}' has a new signature ({role}).", "/procurement/")
+                    except ProcurementRequest.DoesNotExist:
+                        pass
         
         elif action == 'delete':
             if req_id:
@@ -2572,3 +2602,19 @@ def export_expenses_excel(request):
     response['Content-Disposition'] = 'attachment; filename="expense_records.xlsx"'
     workbook.save(response)
     return response
+
+class NotificationsView(TemplateView):
+    template_name = "notifications.html"
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from .models import SystemNotification, SystemUserProfile
+        user_uid = self.request.session.get('logged_in_uid')
+        if user_uid:
+            user_profile = SystemUserProfile.objects.filter(uid=user_uid).first()
+            if user_profile:
+                context['all_notifications'] = SystemNotification.objects.filter(
+                    recipient=user_profile
+                ).order_by('-created_at')
+                SystemNotification.objects.filter(recipient=user_profile, is_read=False).update(is_read=True)
+        return context

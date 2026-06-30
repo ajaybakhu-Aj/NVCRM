@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}All Notifications{% endblock %}
+
+{% block content %}
+<div class="px-6 py-8 h-[calc(100vh-64px)] overflow-y-auto">
+    <div class="max-w-4xl mx-auto">
+        
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-2xl font-bold text-on-surface">All Notifications</h1>
+                <p class="text-sm text-on-surface-variant mt-1">View all your system alerts and approval requests</p>
+            </div>
+            <div class="p-3 bg-primary/10 text-primary rounded-full">
+                <span class="material-symbols-outlined text-2xl">notifications</span>
+            </div>
+        </div>
+
+        <div class="bg-surface-container-low border border-outline-variant/30 rounded-2xl overflow-hidden shadow-sm">
+            {% if all_notifications %}
+                <ul class="divide-y divide-outline-variant/30">
+                    {% for note in all_notifications %}
+                    <li class="p-4 sm:p-5 hover:bg-surface-variant/20 transition-colors {% if not note.is_read %}bg-primary/5{% endif %}">
+                        <a href="{{ note.link|default:'#' }}" class="flex items-start gap-4 block">
+                            <div class="mt-1 w-10 h-10 rounded-full flex items-center justify-center shrink-0 {% if not note.is_read %}bg-primary/20 text-primary{% else %}bg-surface-variant text-on-surface-variant{% endif %}">
+                                <span class="material-symbols-outlined text-[20px]">
+                                    {% if 'approve' in note.message|lower or 'request' in note.message|lower %}
+                                        task_alt
+                                    {% elif 'task' in note.message|lower or 'assign' in note.message|lower %}
+                                        assignment
+                                    {% else %}
+                                        notifications_active
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm text-on-surface font-body-sm leading-relaxed {% if not note.is_read %}font-bold{% endif %}">
+                                    {{ note.message }}
+                                </p>
+                                <div class="flex items-center gap-2 mt-2">
+                                    <span class="text-xs text-on-surface-variant flex items-center gap-1 font-data-mono">
+                                        <span class="material-symbols-outlined text-[12px]">schedule</span>
+                                        {{ note.created_at|timesince }} ago
+                                    </span>
+                                </div>
+                            </div>
+                            {% if not note.is_read %}
+                                <div class="w-2 h-2 bg-primary rounded-full mt-2 shrink-0"></div>
+                            {% endif %}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <div class="p-12 text-center flex flex-col items-center">
+                    <div class="w-16 h-16 rounded-full bg-surface-variant/50 flex items-center justify-center mb-4 text-outline/50">
+                        <span class="material-symbols-outlined text-3xl">notifications_off</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-on-surface mb-1">No Notifications</h3>
+                    <p class="text-sm text-on-surface-variant max-w-sm">You don't have any notifications yet. When you receive alerts or tasks, they will appear here.</p>
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

@@ -283,7 +283,7 @@
                     {% endif %}
                     
                     <!-- Hidden Notifications Dropdown -->
-                    <div id="notifications-menu" class="hidden absolute top-full right-0 mt-4 w-72 bg-surface-container-high border border-outline-variant rounded-lg shadow-2xl z-50">
+                    <div id="notifications-menu" class="hidden absolute top-full right-0 mt-4 w-80 bg-surface-container-high border border-outline-variant rounded-lg shadow-2xl z-50 overflow-hidden">
                         <div class="p-3 border-b border-outline-variant flex justify-between items-center bg-surface-container">
                             <h4 class="font-label-bold text-on-surface uppercase tracking-wider text-xs">Notifications</h4>
                             {% if note_count > 0 %}
@@ -291,15 +291,17 @@
                             {% endif %}
                         </div>
                     {% endwith %}
-    <div class="max-h-64 overflow-y-auto custom-scrollbar">
+    <div class="max-h-[28rem] overflow-y-auto custom-scrollbar">
         {% for note in recent_notifications %}
-        <a href="{{ note.link|default:'#' }}" class="block p-4 border-b border-outline-variant hover:bg-surface-variant transition-colors">
+        <a href="{{ note.link|default:'#' }}" class="block p-4 border-b border-outline-variant hover:bg-surface-variant transition-colors {% if not note.is_read %}bg-primary/5{% endif %}">
             <div class="flex items-center gap-2 mb-1">
-                <span class="material-symbols-outlined text-info text-[14px]">info</span>
-                <p class="text-xs text-on-surface font-semibold">System Alert</p>
+                <span class="material-symbols-outlined {% if not note.is_read %}text-primary{% else %}text-info{% endif %} text-[14px]">
+                    {% if 'approve' in note.message|lower or 'request' in note.message|lower %}task_alt{% elif 'task' in note.message|lower or 'assign' in note.message|lower %}assignment{% else %}info{% endif %}
+                </span>
+                <p class="text-xs text-on-surface font-semibold">{% if not note.is_read %}New Alert{% else %}System Alert{% endif %}</p>
             </div>
-            <p class="text-[10px] text-on-surface-variant">{{ note.message }}</p>
-            <p class="text-[8px] text-outline mt-1">{{ note.created_at|timesince }} ago</p>
+            <p class="text-[11px] text-on-surface-variant leading-relaxed">{{ note.message }}</p>
+            <p class="text-[9px] text-outline mt-1.5">{{ note.created_at|timesince }} ago</p>
         </a>
         {% endfor %}
         
@@ -309,24 +311,25 @@
                 <span class="material-symbols-outlined text-primary text-[14px]">shopping_cart</span>
                 <p class="text-xs text-on-surface font-semibold">Procurement Request</p>
             </div>
-            <p class="text-[10px] text-on-surface-variant">{{ pending_procurements_count }} Procurement requests awaiting your approval.</p>
+            <p class="text-[11px] text-on-surface-variant leading-relaxed">{{ pending_procurements_count }} Procurement requests awaiting your approval.</p>
         </a>
         {% endif %}
         {% if pending_leaves_count > 0 %}
-        <a href="{% url 'leave_list' %}" class="block p-4 hover:bg-surface-variant transition-colors">
+        <a href="{% url 'leave_list' %}" class="block p-4 hover:bg-surface-variant transition-colors border-b border-outline-variant">
             <div class="flex items-center gap-2 mb-1">
                 <span class="material-symbols-outlined text-error text-[14px]">event_busy</span>
                 <p class="text-xs text-on-surface font-semibold">Leave Verification</p>
             </div>
-            <p class="text-[10px] text-on-surface-variant">{{ pending_leaves_count }} Leave requests awaiting your review.</p>
+            <p class="text-[11px] text-on-surface-variant leading-relaxed">{{ pending_leaves_count }} Leave requests awaiting your review.</p>
         </a>
         {% endif %}
-        {% if pending_approvals_count == 0 and unread_notifications_count == 0 %}
-        <div class="p-4 text-center">
-             <p class="text-[10px] text-on-surface-variant italic">No new notifications.</p>
+        {% if pending_approvals_count == 0 and unread_notifications_count == 0 and not recent_notifications %}
+        <div class="p-6 text-center">
+             <p class="text-xs text-on-surface-variant italic">No new notifications.</p>
         </div>
         {% endif %}
     </div>
+    <a href="{% url 'notifications' %}" class="block text-center p-3 text-xs font-label-bold text-primary hover:bg-surface-variant transition-colors bg-surface-container border-t border-outline-variant w-full">View All Notifications</a>
 </div>
 </div>
 <a href="{% url 'user_create' %}" class="material-symbols-outlined text-on-surface-variant hover:text-primary-fixed transition-colors" title="Edit Profile Details">settings</a>
