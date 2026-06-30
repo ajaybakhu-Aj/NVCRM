@@ -694,28 +694,54 @@ class InventoryListView(TemplateView):
         elif action == 'bulk_import':
             excel_file = request.FILES.get('excel_file')
             if excel_file:
+                import csv
+                import io
                 import openpyxl
+                from django.contrib import messages
+                
+                filename = excel_file.name.lower()
+                rows = []
+                
                 try:
-                    wb = openpyxl.load_workbook(excel_file, data_only=True)
-                    ws = wb.active
+                    if filename.endswith('.csv'):
+                        decoded_file = excel_file.read().decode('utf-8-sig')
+                        io_string = io.StringIO(decoded_file)
+                        reader = csv.reader(io_string)
+                        rows = list(reader)[1:] # Skip header
+                    else:
+                        wb = openpyxl.load_workbook(excel_file, data_only=True)
+                        ws = wb.active
+                        rows = list(ws.iter_rows(min_row=2, values_only=True))
+
                     count = 0
-                    for row in ws.iter_rows(min_row=2, values_only=True):
-                        # Expected columns: SKU, Product Name, Category, UOM, Location, Price, Fresh, Damaged, Refurbished, Repairable
+                    for row in rows:
+                        row = list(row) + [None] * max(0, 10 - len(row))
+                        
                         if row[0] and row[1] and row[4] and row[5] is not None:
-                            sku_id = str(row[0])
-                            product_name = str(row[1])
-                            category = str(row[2]) if row[2] else 'Electronics'
-                            uom = str(row[3]) if row[3] else 'Pcs'
-                            location_name = str(row[4]).upper()
-                            price = float(row[5])
+                            sku_id = str(row[0]).strip()
+                            product_name = str(row[1]).strip()
+                            category = str(row[2]).strip() if row[2] else 'Electronics'
+                            uom = str(row[3]).strip() if row[3] else 'Pcs'
+                            location_name = str(row[4]).strip().upper()
                             
-                            fresh_qty = int(row[6]) if row[6] else 0
-                            dam_qty = int(row[7]) if row[7] else 0
-                            refurb_qty = int(row[8]) if row[8] else 0
-                            rep_qty = int(row[9]) if row[9] else 0
-                            
+                            try:
+                                price = float(str(row[5]).replace(',', '').strip())
+                            except ValueError:
+                                price = 0.0
+
+                            def parse_qty(val):
+                                try:
+                                    return int(float(str(val).replace(',', '').strip())) if val and str(val).strip() else 0
+                                except ValueError:
+                                    return 0
+
+                            fresh_qty = parse_qty(row[6])
+                            dam_qty = parse_qty(row[7])
+                            refurb_qty = parse_qty(row[8])
+                            rep_qty = parse_qty(row[9])
+
                             node, _ = OrgNode.objects.get_or_create(name=location_name, defaults={'node_type': 'Warehouse'})
-                            
+
                             if fresh_qty > 0:
                                 InventoryLedger.objects.create(sku_id=sku_id, product_name=product_name, category=category, uom=uom, price=price, quantity_on_hand=fresh_qty, locator_bin_status='Fresh', node_id=node)
                             if dam_qty > 0:
@@ -724,18 +750,15 @@ class InventoryListView(TemplateView):
                                 InventoryLedger.objects.create(sku_id=sku_id, product_name=product_name, category=category, uom=uom, price=price, quantity_on_hand=refurb_qty, locator_bin_status='Refurbished', node_id=node)
                             if rep_qty > 0:
                                 InventoryLedger.objects.create(sku_id=sku_id, product_name=product_name, category=category, uom=uom, price=price, quantity_on_hand=rep_qty, locator_bin_status='Repairable', node_id=node)
-                                
+
                             count += 1
-                            
-                    from django.contrib import messages
-                    messages.success(request, f"Successfully imported {count} stock records from Excel.")
+
+                    messages.success(request, f'Successfully imported {count} stock records.')
                 except Exception as e:
-                    from django.contrib import messages
-                    messages.error(request, f"Failed to import Excel file: {str(e)}")
+                    messages.error(request, f'Failed to import file: {str(e)}')
             else:
                 from django.contrib import messages
-                messages.error(request, "No Excel file provided for bulk import.")
-                
+                messages.error(request, 'No file provided for bulk import.')
         return redirect('inventory_list')
 
 from .models import SystemUserProfile
