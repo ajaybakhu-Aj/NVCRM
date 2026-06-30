@@ -146,7 +146,21 @@
                         {% endif %}
                     </td>
                     <td class="py-4 px-4 text-sm">{{ record.logged_by.full_name|default:"System" }}</td>
-                    <td class="py-4 px-4 text-right font-semibold text-error font-tabular-numeric">Rs. {{ record.amount|floatformat:2 }}</td>
+                    <td class="py-4 px-4 text-right">
+                        <div class="flex items-center justify-end gap-3">
+                            <span class="font-semibold text-error font-tabular-numeric">Rs. {{ record.amount|floatformat:2 }}</span>
+                            {% if request.session.active_role == 'CEO' %}
+                            <form method="POST" action="{% url 'account_expenses' %}" class="inline m-0 p-0" onsubmit="return confirm('Are you sure you want to delete this expense record?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete_expense">
+                                <input type="hidden" name="expense_id" value="{{ record.id }}">
+                                <button type="submit" class="text-on-surface-variant hover:text-error transition-colors flex items-center" title="Delete Expense">
+                                    <span class="material-symbols-outlined text-[18px]">delete</span>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>

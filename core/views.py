@@ -2411,6 +2411,19 @@ def account_expenses(request):
             messages.success(request, f"Successfully logged expense: Rs. {amount} for {title}")
             return redirect('account_expenses')
             
+        elif action == 'delete_expense':
+            if request.session.get('active_role') == 'CEO':
+                expense_id = request.POST.get('expense_id')
+                if expense_id:
+                    expense = ExpenseRecord.objects.filter(id=expense_id).first()
+                    if expense:
+                        title = expense.title
+                        expense.delete()
+                        messages.success(request, f"Successfully deleted expense: {title}")
+            else:
+                messages.error(request, "Permission Denied. Only the CEO can delete expense records.")
+            return redirect('account_expenses')
+            
     # Calculate metrics
     from django.utils import timezone
     today = timezone.now().date()
