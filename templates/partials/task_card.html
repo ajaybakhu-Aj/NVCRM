@@ -8,7 +8,7 @@
     data-assignee="{% if task.assigned_to %}{{ task.assigned_to.full_name|escapejs }}{% else %}Unassigned{% endif %}"
     data-duedate="{% if task.due_date %}{% load nepali_filters %}{{ task.due_date|to_nepali_date:'%B %d, %Y' }}{% else %}Not set{% endif %}"
     onclick="openTaskDetail(this)"
-    class="bg-surface-container border border-outline-variant/30 p-4 rounded-xl shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing hover:border-primary/50 transition-all group relative overflow-hidden flex flex-col gap-3">
+    class="shrink-0 bg-surface-container border border-outline-variant/30 p-4 rounded-xl shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing hover:border-primary/50 transition-all group relative overflow-hidden flex flex-col gap-3">
 
     <!-- Priority Gradient indicator -->
     <div class="absolute top-0 left-0 right-0 h-[3px] 
