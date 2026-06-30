@@ -2460,3 +2460,52 @@ def account_expenses(request):
         'categories': ExpenseRecord.CATEGORY_CHOICES,
     }
     return render(request, 'expenses.html', context)
+
+def export_expenses_excel(request):
+    if 'logged_in_uid' not in request.session:
+        return redirect('login_view')
+
+    uid = request.session['logged_in_uid']
+    system_user = SystemUserProfile.objects.filter(uid=uid).first()
+    
+    if system_user and not system_user.can_access_account_expenses:
+        from django.contrib import messages
+        messages.error(request, "Access Denied: You do not have permission to download Expenses.")
+        return redirect('dashboard')
+
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    from .models import ExpenseRecord
+    import openpyxl
+    from django.http import HttpResponse
+
+    records = ExpenseRecord.objects.all().order_by('-date')
+    if start_date and end_date:
+        records = records.filter(date__range=[start_date, end_date])
+    elif start_date:
+        records = records.filter(date__gte=start_date)
+    elif end_date:
+        records = records.filter(date__lte=end_date)
+
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+    worksheet.title = 'Expense Records'
+
+    worksheet.append(['Date', 'Title', 'Category', 'Amount', 'Description', 'Logged By'])
+
+    for record in records:
+        logged_by_name = record.logged_by.full_name if record.logged_by else 'Unknown'
+        worksheet.append([
+            str(record.date),
+            record.title,
+            record.category,
+            float(record.amount),
+            record.description or '',
+            logged_by_name
+        ])
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="expense_records.xlsx"'
+    workbook.save(response)
+    return response
