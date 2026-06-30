@@ -1091,6 +1091,8 @@ class UserCreateView(TemplateView):
                         user.can_access_task_board = request.POST.get('can_access_task_board') == 'true'
                     if 'can_access_staff_payroll' in request.POST:
                         user.can_access_staff_payroll = request.POST.get('can_access_staff_payroll') == 'true'
+                    if 'can_access_account_expenses' in request.POST:
+                        user.can_access_account_expenses = request.POST.get('can_access_account_expenses') == 'true'
                 
                 user.save()
                 
@@ -2382,6 +2384,9 @@ def account_expenses(request):
     
     uid = request.session['logged_in_uid']
     system_user = SystemUserProfile.objects.filter(uid=uid).first()
+    
+    if system_user and not system_user.can_access_account_expenses:
+        return redirect('dashboard')
     
     if request.method == 'POST':
         action = request.POST.get('action')

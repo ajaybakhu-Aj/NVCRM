@@ -286,6 +286,7 @@ class SystemUserProfile(models.Model):
     can_access_task_board = models.BooleanField(default=False)
     can_access_staff_payroll = models.BooleanField(default=False)
     can_access_system_log = models.BooleanField(default=False)
+    can_access_account_expenses = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
