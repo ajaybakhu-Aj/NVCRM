@@ -2372,3 +2372,86 @@ class NoticePollView(View):
             })
             
         return JsonResponse({'notices': data})
+
+from django.db.models import Sum
+from .models import ExpenseRecord
+
+def account_expenses(request):
+    if 'logged_in_uid' not in request.session:
+        return redirect('login_view')
+    
+    uid = request.session['logged_in_uid']
+    system_user = SystemUserProfile.objects.filter(uid=uid).first()
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'add_expense':
+            title = request.POST.get('title')
+            amount = request.POST.get('amount')
+            category = request.POST.get('category')
+            date_val = request.POST.get('date')
+            from django.utils import timezone
+            if not date_val:
+                date_val = timezone.now().date()
+            description = request.POST.get('description', '')
+            
+            ExpenseRecord.objects.create(
+                title=title,
+                amount=amount,
+                category=category,
+                date=date_val,
+                description=description,
+                logged_by=system_user
+            )
+            messages.success(request, f"Successfully logged expense: Rs. {amount} for {title}")
+            return redirect('account_expenses')
+            
+    # Calculate metrics
+    from django.utils import timezone
+    today = timezone.now().date()
+    week_start = today - timezone.timedelta(days=today.weekday())
+    
+    daily_expenses = ExpenseRecord.objects.filter(date=today).aggregate(Sum('amount'))['amount__sum'] or 0
+    weekly_expenses = ExpenseRecord.objects.filter(date__gte=week_start).aggregate(Sum('amount'))['amount__sum'] or 0
+    total_expenses = ExpenseRecord.objects.aggregate(Sum('amount'))['amount__sum'] or 0
+    
+    # Highest expense area
+    category_totals = ExpenseRecord.objects.values('category').annotate(total=Sum('amount')).order_by('-total')
+    highest_expense_category = category_totals.first() if category_totals else None
+    
+    # All records
+    records = ExpenseRecord.objects.all().order_by('-date', '-created_at')
+    
+    # Generate CA Insights based on highest category
+    ca_insight_title = "Overall Financial Health"
+    ca_insight_detail = "Your spending is well diversified. Consider setting monthly caps on variable expenses like Marketing and Misc."
+    
+    if highest_expense_category:
+        highest_cat = highest_expense_category['category']
+        if highest_cat == 'Payroll':
+            ca_insight_title = "Optimize Payroll Structure"
+            ca_insight_detail = "Payroll is currently your highest expense. As your CA, I advise cross-training employees to maximize productivity without hiring more staff, and evaluating performance-based bonuses over fixed salary increments."
+        elif highest_cat == 'Marketing':
+            ca_insight_title = "Audit Marketing ROI"
+            ca_insight_detail = "Your marketing spend is disproportionately high. Calculate Customer Acquisition Cost (CAC) and eliminate underperforming channels immediately. Focus on organic SEO and high-ROI targeted ads."
+        elif highest_cat == 'Operations':
+            ca_insight_title = "Streamline Operations"
+            ca_insight_detail = "High operational costs indicate inefficiencies. Bulk purchase office supplies, renegotiate lease terms if possible, and implement strict approval workflows for daily operational spends."
+        elif highest_cat == 'Procurement':
+            ca_insight_title = "Renegotiate Vendor Contracts"
+            ca_insight_detail = "Hardware procurement is eating your margins. Leverage bulk buying and request net-30 or net-60 payment terms from suppliers to improve cash flow."
+        elif highest_cat == 'Utilities':
+            ca_insight_title = "Energy & Resource Audit"
+            ca_insight_detail = "Utility expenses are spiking. Ensure systems are powered down during non-business hours and negotiate internet/telecom packages for corporate bulk rates."
+            
+    context = {
+        'daily_expenses': daily_expenses,
+        'weekly_expenses': weekly_expenses,
+        'total_expenses': total_expenses,
+        'highest_expense_category': highest_expense_category,
+        'records': records,
+        'ca_insight_title': ca_insight_title,
+        'ca_insight_detail': ca_insight_detail,
+        'categories': ExpenseRecord.CATEGORY_CHOICES,
+    }
+    return render(request, 'expenses.html', context)

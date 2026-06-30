@@ -1,3 +1,4 @@
+import django.utils.timezone
 import uuid
 from django.db import models
 from django.core.validators import MinValueValidator
@@ -361,3 +362,27 @@ class SystemNotification(models.Model):
 
     def __str__(self):
         return f"To {self.recipient.full_name}: {self.message}"
+
+class ExpenseRecord(models.Model):
+    CATEGORY_CHOICES = [
+        ('Operations', 'Operations & Office'),
+        ('Payroll', 'Payroll & Benefits'),
+        ('Marketing', 'Marketing & Sales'),
+        ('Procurement', 'Hardware Procurement (COGS)'),
+        ('Utilities', 'Utilities & Internet'),
+        ('Software', 'Software & IT Subscriptions'),
+        ('Travel', 'Travel & Transport'),
+        ('Misc', 'Miscellaneous'),
+    ]
+    
+    title = models.CharField(max_length=255)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
+    date = models.DateField(default=django.utils.timezone.now)
+    description = models.TextField(blank=True, null=True)
+    logged_by = models.ForeignKey(SystemUserProfile, on_delete=models.SET_NULL, null=True, blank=True)
+    receipt = models.FileField(upload_to='receipts/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} - Rs. {self.amount}"

@@ -186,6 +186,9 @@
 <a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant font-body-md text-body-md hover:bg-surface-variant transition-colors" href="{% url 'accounts_receivable' %}">
 <span class="material-symbols-outlined">payments</span> Accounts Receivable
 </a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant font-body-md text-body-md hover:bg-surface-variant transition-colors" href="{% url 'account_expenses' %}">
+<span class="material-symbols-outlined">account_balance</span> Account Expenses
+</a>
 {% endif %}
 {% if not system_user or system_user.can_access_pos %}
 <a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant font-body-md text-body-md hover:bg-surface-variant transition-colors" href="{% url 'pos' %}">
