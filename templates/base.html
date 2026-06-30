@@ -272,21 +272,22 @@
 <!-- Notifications Wrapper -->
 <div class="relative">
 <button class="material-symbols-outlined text-on-surface-variant hover:text-primary-fixed transition-colors" onclick="document.getElementById('notifications-menu').classList.toggle('hidden')">notifications</button>
-{% with note_count=unread_notifications|length|add:pending_approvals_count %}
-{% if note_count > 0 %}
-<span class="absolute -top-1.5 -right-1.5 flex h-[15px] min-w-[15px] px-[3px] items-center justify-center rounded-full bg-error text-[8px] font-bold text-on-error pointer-events-none">{{ note_count }}</span>
-{% endif %}
-<!-- Hidden Notifications Dropdown -->
-<div id="notifications-menu" class="hidden absolute top-full right-0 mt-4 w-72 bg-surface-container-high border border-outline-variant rounded-lg shadow-2xl z-50">
-    <div class="p-3 border-b border-outline-variant flex justify-between items-center bg-surface-container">
-        <h4 class="font-label-bold text-on-surface uppercase tracking-wider text-xs">Notifications</h4>
-        {% if note_count > 0 %}
-            <span class="text-[9px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">{{ note_count }} New</span>
-        {% endif %}
-    </div>
-{% endwith %}
+                    {% with note_count=unread_notifications_count|add:pending_approvals_count %}
+                    {% if note_count > 0 %}
+                    <span class="absolute -top-1.5 -right-1.5 flex h-[15px] min-w-[15px] px-[3px] items-center justify-center rounded-full bg-error text-[8px] font-bold text-on-error pointer-events-none">{{ note_count }}</span>
+                    {% endif %}
+                    
+                    <!-- Hidden Notifications Dropdown -->
+                    <div id="notifications-menu" class="hidden absolute top-full right-0 mt-4 w-72 bg-surface-container-high border border-outline-variant rounded-lg shadow-2xl z-50">
+                        <div class="p-3 border-b border-outline-variant flex justify-between items-center bg-surface-container">
+                            <h4 class="font-label-bold text-on-surface uppercase tracking-wider text-xs">Notifications</h4>
+                            {% if note_count > 0 %}
+                            <span class="text-[9px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">{{ note_count }} New</span>
+                            {% endif %}
+                        </div>
+                    {% endwith %}
     <div class="max-h-64 overflow-y-auto custom-scrollbar">
-        {% for note in unread_notifications %}
+        {% for note in recent_notifications %}
         <a href="{{ note.link|default:'#' }}" class="block p-4 border-b border-outline-variant hover:bg-surface-variant transition-colors">
             <div class="flex items-center gap-2 mb-1">
                 <span class="material-symbols-outlined text-info text-[14px]">info</span>

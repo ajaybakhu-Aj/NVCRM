@@ -31,9 +31,11 @@ def pending_approvals(request):
     total_count = pending_leaves + procurement_count
     
     # Fetch notifications for this user
-    unread_notifications = []
+    recent_notifications = []
+    unread_count = 0
     if system_user:
-        unread_notifications = SystemNotification.objects.filter(recipient=system_user, is_read=False).order_by('-created_at')
+        recent_notifications = SystemNotification.objects.filter(recipient=system_user).order_by('-created_at')[:7]
+        unread_count = SystemNotification.objects.filter(recipient=system_user, is_read=False).count()
 
     return {
         'pending_approvals_count': total_count,
@@ -41,6 +43,6 @@ def pending_approvals(request):
         'pending_procurements_count': procurement_count,
         'system_user': system_user,
         'active_role_upper': active_role.upper() if active_role else '',
-        'unread_notifications': unread_notifications,
-        'unread_notifications_count': len(unread_notifications) if system_user else 0
+        'recent_notifications': recent_notifications,
+        'unread_notifications_count': unread_count
     }
