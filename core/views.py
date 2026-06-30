@@ -2367,10 +2367,8 @@ class ProjectTaskBoardView(TemplateView):
                 task = ProjectTask.objects.filter(id=task_id).first()
                 if task:
                     task.delete()
-                    from django.contrib import messages
                     messages.success(request, 'Task deleted successfully.')
             else:
-                from django.contrib import messages
                 messages.error(request, 'Access Denied: You do not have permission to delete tasks.')
 
         elif action == 'update_status':
