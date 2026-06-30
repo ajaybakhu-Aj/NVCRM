@@ -216,10 +216,15 @@
 <link href="https://nepalidatepicker.sajanmaharjan.com.np/v5/nepali.datepicker/css/nepali.datepicker.v5.0.6.min.css" rel="stylesheet" type="text/css">
 <script src="https://nepalidatepicker.sajanmaharjan.com.np/v5/nepali.datepicker/js/nepali.datepicker.v5.0.6.min.js" type="text/javascript"></script>
 <script>
-    (function() {
+    (function initNepaliDP() {
         var expStart = document.getElementById("export-start-date");
         var expEnd = document.getElementById("export-end-date");
         var addDate = document.getElementById("add-expense-date");
+        
+        if (expStart && typeof expStart.nepaliDatePicker === 'undefined') {
+            setTimeout(initNepaliDP, 100);
+            return;
+        }
         
         var dpConfig = {
             ndpYear: true,

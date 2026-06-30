@@ -389,11 +389,18 @@
 <!-- Nepali Datepicker JS -->
 <script src="https://nepalidatepicker.sajanmaharjan.com.np/v5/nepali.datepicker/js/nepali.datepicker.v5.0.6.min.js" type="text/javascript"></script>
 <script>
-    (function() {
+    (function initLeaveDP() {
         var startEl = document.getElementById("leave_start_date");
         var endEl = document.getElementById("leave_end_date");
-        if(startEl) startEl.nepaliDatePicker({ ndpYear: true, ndpMonth: true });
-        if(endEl) endEl.nepaliDatePicker({ ndpYear: true, ndpMonth: true });
+        
+        if (startEl && typeof startEl.nepaliDatePicker === 'undefined') {
+            setTimeout(initLeaveDP, 100);
+            return;
+        }
+        
+        var dpConfig = { ndpYear: true, ndpMonth: true, container: "body" };
+        if(startEl) startEl.nepaliDatePicker(dpConfig);
+        if(endEl) endEl.nepaliDatePicker(dpConfig);
     })();
 </script>
 <script>
