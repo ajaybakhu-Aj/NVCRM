@@ -2297,13 +2297,15 @@ class ProjectTaskBoardView(TemplateView):
         # Get all users for the assignment dropdown
         users = SystemUserProfile.objects.all()
         
+        can_delete = active_role in ['CEO', 'COO', 'HR AND OPERATION HEAD', 'HR', 'OPERATION HEAD', 'CITO']
         context = {
             'kanban_data': kanban_data,
             'metrics': metrics,
             'users': users,
             'today': date.today().strftime('%Y-%m-%d'),
             'is_management': is_management,
-            'view_user_name': view_user_name
+            'view_user_name': view_user_name,
+            'can_delete': can_delete
         }
         return render(request, self.template_name, context)
 
@@ -2357,6 +2359,20 @@ class ProjectTaskBoardView(TemplateView):
                 
             messages.success(request, 'Task created successfully.')
             
+        elif action == 'delete_task':
+            task_id = request.POST.get('task_id')
+            active_role = request.session.get('active_role', '').upper()
+            allowed_roles = ['CEO', 'COO', 'HR AND OPERATION HEAD', 'HR', 'OPERATION HEAD', 'CITO']
+            if active_role in allowed_roles:
+                task = ProjectTask.objects.filter(id=task_id).first()
+                if task:
+                    task.delete()
+                    from django.contrib import messages
+                    messages.success(request, 'Task deleted successfully.')
+            else:
+                from django.contrib import messages
+                messages.error(request, 'Access Denied: You do not have permission to delete tasks.')
+
         elif action == 'update_status':
             task_id = request.POST.get('task_id')
             new_status = request.POST.get('new_status')

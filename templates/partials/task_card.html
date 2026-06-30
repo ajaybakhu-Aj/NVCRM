@@ -1,4 +1,5 @@
 <div id="task_{{ task.id }}" draggable="true" ondragstart="drag(event)"
+    data-realid="{{ task.id }}"
     data-id="TSK-{{ task.id|stringformat:'04d' }}"
     data-title="{{ task.title|escapejs }}"
     data-desc="{% if task.description %}{{ task.description|escapejs }}{% endif %}"
