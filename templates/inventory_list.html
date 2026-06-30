@@ -52,17 +52,7 @@
             </div>
             
             <!-- Messages -->
-            {% if messages %}
-            <div class="mb-4">
-                {% for message in messages %}
-                <div class="p-3 rounded border bg-primary/10 border-primary text-primary font-label-bold flex items-center gap-2 text-sm">
-                    <span class="material-symbols-outlined text-sm">check_circle</span>
-                    {{ message }}
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-
+            
             <div class="bg-surface-container-low rounded-xl border border-outline-variant overflow-x-auto">
                 <table id="stock-table" class="w-full text-left border-collapse whitespace-nowrap min-w-max">
                     <thead>

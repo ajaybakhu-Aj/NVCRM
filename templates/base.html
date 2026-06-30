@@ -336,7 +336,17 @@
 <!-- Main Content Area -->
 <main class="ml-0 md:ml-sidebar-width pt-header-height min-h-screen bg-background pb-20 md:pb-0">
 <div class="p-4 md:p-container-padding">
-{% block content %}{% endblock content %}
+    {% if messages %}
+    <div class="mb-6 space-y-2">
+        {% for message in messages %}
+        <div class="p-4 rounded border {% if message.tags == 'error' %}bg-error-container/20 border-error text-error{% else %}bg-primary-container/20 border-primary text-primary{% endif %} font-label-bold flex items-center gap-2 shadow-sm">
+            <span class="material-symbols-outlined text-[20px]">{% if message.tags == 'error' %}error{% else %}check_circle{% endif %}</span>
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% block content %}{% endblock content %}
 </div>
 </main>
 <!-- Bottom Nav Bar (Mobile only) -->

@@ -8,10 +8,7 @@
     </div>
 </div>
 
-{% if messages %}
-<div class="mb-6">
-    {% for message in messages %}
-    <div class="p-4 rounded border {% if message.tags == 'error' %}bg-error/10 border-error text-error{% else %}bg-primary/10 border-primary text-primary{% endif %} font-label-bold flex items-center gap-2">
+ font-label-bold flex items-center gap-2">
         <span class="material-symbols-outlined">{% if message.tags == 'error' %}error{% else %}check_circle{% endif %}</span>
         {{ message }}
     </div>

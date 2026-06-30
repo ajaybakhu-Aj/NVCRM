@@ -39,10 +39,7 @@
 </div>
 
 <!-- Messages -->
-{% if messages %}
-<div class="mb-6 space-y-2">
-    {% for message in messages %}
-    <div class="p-4 rounded-lg flex items-center gap-3 text-sm font-medium {% if message.tags == 'error' %}bg-error/10 text-error border border-error/30{% else %}bg-success/10 text-success border border-success/30{% endif %}">
+">
         <span class="material-symbols-outlined text-lg">{% if message.tags == 'error' %}error{% else %}check_circle{% endif %}</span>
         {{ message }}
     </div>
