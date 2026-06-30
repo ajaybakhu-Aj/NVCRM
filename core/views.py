@@ -2395,9 +2395,9 @@ def account_expenses(request):
             amount = request.POST.get('amount')
             category = request.POST.get('category')
             date_val = request.POST.get('date')
-            from django.utils import timezone
+            import nepali_datetime
             if not date_val:
-                date_val = timezone.now().date()
+                date_val = str(nepali_datetime.date.today())
             description = request.POST.get('description', '')
             
             ExpenseRecord.objects.create(
@@ -2425,12 +2425,13 @@ def account_expenses(request):
             return redirect('account_expenses')
             
     # Calculate metrics
-    from django.utils import timezone
-    today = timezone.now().date()
-    week_start = today - timezone.timedelta(days=today.weekday())
-    
-    daily_expenses = ExpenseRecord.objects.filter(date=today).aggregate(Sum('amount'))['amount__sum'] or 0
-    weekly_expenses = ExpenseRecord.objects.filter(date__gte=week_start).aggregate(Sum('amount'))['amount__sum'] or 0
+    import nepali_datetime
+    import datetime
+    today_bs = nepali_datetime.date.today()
+    week_start_bs = today_bs - datetime.timedelta(days=today_bs.weekday())
+
+    daily_expenses = ExpenseRecord.objects.filter(date=str(today_bs)).aggregate(Sum('amount'))['amount__sum'] or 0
+    weekly_expenses = ExpenseRecord.objects.filter(date__gte=str(week_start_bs)).aggregate(Sum('amount'))['amount__sum'] or 0
     total_expenses = ExpenseRecord.objects.aggregate(Sum('amount'))['amount__sum'] or 0
     
     # Highest expense area
