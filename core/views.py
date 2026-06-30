@@ -1783,9 +1783,15 @@ class AccountsReceivableView(View):
             due_date_val = None
             if due_date_str:
                 try:
-                    due_date_val = datetime.strptime(due_date_str, '%Y-%m-%d').date()
-                except ValueError:
-                    pass
+                    import nepali_datetime
+                    year_part, month_part, day_part = map(int, due_date_str.split('-'))
+                    np_date = nepali_datetime.date(year_part, month_part, day_part)
+                    due_date_val = np_date.to_datetime_date()
+                except Exception:
+                    try:
+                        due_date_val = datetime.strptime(due_date_str, '%Y-%m-%d').date()
+                    except ValueError:
+                        pass
 
             if invoice_number and node_id:
                 try:
@@ -1842,9 +1848,15 @@ class AccountsReceivableView(View):
 
                     if due_date_str:
                         try:
-                            inv.due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
-                        except ValueError:
-                            pass
+                            import nepali_datetime
+                            year_part, month_part, day_part = map(int, due_date_str.split('-'))
+                            np_date = nepali_datetime.date(year_part, month_part, day_part)
+                            inv.due_date = np_date.to_datetime_date()
+                        except Exception:
+                            try:
+                                inv.due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
+                            except ValueError:
+                                pass
                     inv.save()
                 except AccountsReceivable.DoesNotExist:
                     pass
