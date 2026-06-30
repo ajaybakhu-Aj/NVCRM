@@ -236,7 +236,7 @@
         
         {% if can_delete %}
         <div class="mt-6 border-t border-outline-variant/50 pt-4 flex justify-end">
-            <form method="POST" action="{% url 'task_board' %}" onsubmit="return confirm('Are you sure you want to completely delete this task? This cannot be undone.');">
+            <form method="POST" action="{% url 'task_board' %}" hx-boost="false" onsubmit="return confirm('Are you sure you want to completely delete this task? This cannot be undone.');">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="delete_task">
                 <input type="hidden" name="task_id" id="dt-realid" value="">
@@ -257,7 +257,7 @@
             <h3 class="font-headline-sm text-headline-sm text-primary-fixed uppercase tracking-wider">Deploy New Task</h3>
             <button onclick="toggleModal('newTaskModal')" class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">close</button>
         </div>
-        <form method="POST" action="{% url 'task_board' %}">
+        <form method="POST" action="{% url 'task_board' %}" hx-boost="false">
             {% csrf_token %}
             <input type="hidden" name="action" value="create_task">
             
