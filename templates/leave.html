@@ -401,13 +401,31 @@
         const modal = document.getElementById('leaveModal');
         if (modal) {
             modal.classList.toggle('hidden');
+            if (modal.classList.contains('hidden')) {
+                document.body.style.overflow = '';
+            } else {
+                document.body.style.overflow = 'hidden';
+            }
         }
     }
+    
+    // Hide nepali datepicker if any scrolling happens to prevent it from detaching
+    window.addEventListener('scroll', function() {
+        const ndpBox = document.getElementById('ndp-nepali-box');
+        if (ndpBox && ndpBox.style.display !== 'none') {
+            ndpBox.style.display = 'none';
+        }
+    }, true);
     
     function toggleSettingsModal() {
         const modal = document.getElementById('settingsModal');
         if (modal) {
             modal.classList.toggle('hidden');
+            if (modal.classList.contains('hidden')) {
+                document.body.style.overflow = '';
+            } else {
+                document.body.style.overflow = 'hidden';
+            }
         }
     }
 </script>
