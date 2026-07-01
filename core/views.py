@@ -665,9 +665,51 @@ class InventoryListView(TemplateView):
 
         inventory = list(aggregated_data.values())
         accounts = AccountsReceivable.objects.all().order_by('-created_at')[:5]
+        
+        # Calculate Dynamic Stats
+        total_fresh_qty = sum(item['fresh_qty'] for item in inventory)
+        total_refurb_qty = sum(item['refurb_qty'] for item in inventory)
+        total_dam_qty = sum(item['dam_qty'] for item in inventory)
+        total_rep_qty = sum(item['rep_qty'] for item in inventory)
+        total_rep_amt = sum(item['rep_amt'] for item in inventory)
+        total_qty = sum(item['tot_qty'] for item in inventory)
+        
+        inventory_health = 0
+        if total_qty > 0:
+            inventory_health = ((total_fresh_qty + total_refurb_qty) / total_qty) * 100
+            
+        warehouse_load = len(inventory)
+        warehouse_capacity = max(100, ((warehouse_load // 100) + 1) * 100)
+        warehouse_load_percentage = (warehouse_load / warehouse_capacity) * 100 if warehouse_capacity > 0 else 0
+        
+        all_accounts = AccountsReceivable.objects.all()
+        total_receivables = sum(acc.amount_due for acc in all_accounts)
+        settled_receivables = sum(acc.amount_due for acc in all_accounts if acc.state == 'Settled')
+        
+        cash_flow_velocity = 0
+        if total_receivables > 0:
+            cash_flow_velocity = (settled_receivables / total_receivables) * 100
+            
+        repairable_percentage = 0
+        if total_qty > 0:
+            repairable_percentage = (total_rep_qty / total_qty) * 100
+            
+        # Extra stats for AR ledger footer
+        past_due_amount = sum(acc.amount_due for acc in all_accounts if acc.state != 'Settled')
+
         return render(request, self.template_name, {
             'inventory': inventory,
-            'accounts': accounts
+            'accounts': accounts,
+            'inventory_health': inventory_health,
+            'warehouse_load': warehouse_load,
+            'warehouse_capacity': warehouse_capacity,
+            'warehouse_load_percentage': warehouse_load_percentage,
+            'cash_flow_velocity': cash_flow_velocity,
+            'repairable_units': total_rep_qty,
+            'repairable_value': total_rep_amt,
+            'repairable_percentage': repairable_percentage,
+            'total_receivables': total_receivables,
+            'past_due_amount': past_due_amount,
         })
         
     def post(self, request, *args, **kwargs):

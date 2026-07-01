@@ -304,8 +304,8 @@
                 <!-- Footer stats for ledger -->
                 <div class="px-6 py-4 bg-surface-container border-t border-outline-variant flex flex-wrap justify-between items-center text-body-sm gap-4">
                     <div class="flex gap-8">
-                        <p><span class="text-on-surface-variant uppercase text-[10px] mr-2">Total Receivables:</span> <span class="font-bold">Rs. 208,520.50</span></p>
-                        <p><span class="text-on-surface-variant uppercase text-[10px] mr-2">Critical Past Due:</span> <span class="font-bold text-error">Rs. 92,400.00</span></p>
+                        <p><span class="text-on-surface-variant uppercase text-[10px] mr-2">Total Receivables:</span> <span class="font-bold">Rs. {{ total_receivables|floatformat:2 }}</span></p>
+                        <p><span class="text-on-surface-variant uppercase text-[10px] mr-2">Critical Past Due:</span> <span class="font-bold text-error">Rs. {{ past_due_amount|floatformat:2 }}</span></p>
                     </div>
                     <div class="flex gap-2">
                         <button class="px-3 py-1 bg-surface-container-high rounded text-xs border border-outline hover:bg-surface-variant">PREVIOUS</button>
@@ -320,7 +320,7 @@
     <section class="grid grid-cols-1 md:grid-cols-3 gap-gutter-grid md:h-48">
         <div class="bg-surface-container-high rounded-xl border border-outline-variant p-6 flex flex-col justify-center">
             <p class="text-[10px] font-bold text-primary-fixed tracking-widest mb-1">INVENTORY HEALTH</p>
-            <h4 class="font-headline-md text-headline-md text-tertiary">98.2%</h4>
+            <h4 class="font-headline-md text-headline-md text-tertiary">{{ inventory_health|floatformat:1 }}%</h4>
             <p class="text-body-sm text-on-surface-variant">Audit accuracy across all nodes.</p>
         </div>
         
@@ -329,18 +329,18 @@
                 <span class="material-symbols-outlined text-8xl">trending_up</span>
             </div>
             <p class="text-[10px] font-bold text-primary-fixed tracking-widest mb-1">CASH FLOW VELOCITY</p>
-            <h4 class="font-headline-md text-headline-md text-tertiary">+14.5%</h4>
+            <h4 class="font-headline-md text-headline-md text-tertiary">+{{ cash_flow_velocity|floatformat:1 }}%</h4>
             <p class="text-body-sm text-on-surface-variant">30-day settlement acceleration.</p>
         </div>
         
         <div class="bg-surface-container-high rounded-xl border border-outline-variant p-6 flex flex-col justify-center relative">
             <p class="text-[10px] font-bold text-primary-fixed tracking-widest mb-1">WAREHOUSE LOAD</p>
             <div class="flex items-end gap-2">
-                <h4 class="font-headline-md text-headline-md text-tertiary">84</h4>
-                <span class="text-body-sm text-on-surface-variant mb-1.5">/ 100 BINS</span>
+                <h4 class="font-headline-md text-headline-md text-tertiary">{{ warehouse_load }}</h4>
+                <span class="text-body-sm text-on-surface-variant mb-1.5">/ {{ warehouse_capacity }} BINS</span>
             </div>
             <div class="w-full bg-surface-container rounded-full h-1 mt-2">
-                <div class="bg-primary-fixed h-full w-[84%]"></div>
+                <div class="bg-primary-fixed h-full" style="width: {{ warehouse_load_percentage|floatformat:0 }}%;"></div>
             </div>
         </div>
     </section>
@@ -359,14 +359,14 @@
             <div class="flex-1 space-y-3 min-w-[250px]">
                 <div class="flex justify-between items-center text-body-sm">
                     <span class="text-on-surface-variant">Pending Units:</span>
-                    <span class="font-bold text-primary-fixed">42</span>
+                    <span class="font-bold text-primary-fixed">{{ repairable_units }}</span>
                 </div>
                 <div class="flex justify-between items-center text-body-sm">
                     <span class="text-on-surface-variant">Est. Value Recovery:</span>
-                    <span class="font-bold text-primary-fixed">$14,200.00</span>
+                    <span class="font-bold text-primary-fixed">Rs. {{ repairable_value|floatformat:2 }}</span>
                 </div>
                 <div class="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-primary-fixed h-full w-2/3"></div>
+                    <div class="bg-primary-fixed h-full" style="width: {{ repairable_percentage|floatformat:0 }}%;"></div>
                 </div>
             </div>
             
