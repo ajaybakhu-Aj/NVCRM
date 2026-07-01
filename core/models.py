@@ -187,6 +187,7 @@ class AttendanceRecord(models.Model):
         ('Late', 'Late'),
         ('Absent', 'Absent'),
         ('Leave', 'On Leave'),
+        ('Pending Approval', 'Pending Approval'),
     ]
     employee_name = models.CharField(max_length=255)
     date = models.DateField()

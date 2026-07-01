@@ -539,9 +539,49 @@ class AttendanceCheckinView(TemplateView):
                 pass
 
         cutoff_time = time(9, 30, 0)
+        late_cutoff = time(10, 15, 0)
         status = 'Present'
+        
+        check_type = request.POST.get('check_type')
+        
         if current_time > cutoff_time:
             status = 'Late'
+            
+        if check_type == 'in' and current_time > late_cutoff:
+            import nepali_datetime
+            from datetime import timedelta
+            current_np_date = nepali_datetime.date.from_datetime_date(today)
+            current_np_month = current_np_date.month
+            current_np_year = current_np_date.year
+
+            start_ad = today - timedelta(days=32)
+            past_late_records = AttendanceRecord.objects.filter(
+                employee_name=logged_in_name,
+                date__gte=start_ad,
+                check_in_time__gt=late_cutoff
+            )
+
+            late_count = 0
+            for rec in past_late_records:
+                if rec.date == today: continue
+                rec_np = nepali_datetime.date.from_datetime_date(rec.date)
+                if rec_np.year == current_np_year and rec_np.month == current_np_month:
+                    late_count += 1
+            
+            if late_count >= 3:
+                status = 'Pending Approval'
+                from .models import MissedAttendanceRequest, SystemUserProfile
+                system_user = SystemUserProfile.objects.filter(full_name=logged_in_name).first()
+                if system_user:
+                    if not MissedAttendanceRequest.objects.filter(employee=system_user, start_date=today).exists():
+                        MissedAttendanceRequest.objects.create(
+                            employee=system_user,
+                            start_date=today,
+                            end_date=today,
+                            check_in_time=current_time,
+                            check_out_time=time(17, 30, 0),
+                            reason=f"Late check-in quota exceeded (late for the {late_count + 1}th time this month)."
+                        )
 
         record, created = AttendanceRecord.objects.get_or_create(
             employee_name=logged_in_name,
@@ -555,7 +595,6 @@ class AttendanceCheckinView(TemplateView):
         )
 
         is_new_checkout = False
-        check_type = request.POST.get('check_type')
         if check_type == 'in':
             pass
         elif not created and not record.check_out_time:
@@ -1383,13 +1422,22 @@ class LeaveListView(TemplateView):
                             from datetime import timedelta
                             current_date = ma_req.start_date
                             while current_date <= ma_req.end_date:
+                                existing_record = AttendanceRecord.objects.filter(
+                                    employee_name=ma_req.employee.full_name, 
+                                    date=current_date
+                                ).first()
+                                final_check_out = ma_req.check_out_time
+                                if existing_record and existing_record.check_out_time:
+                                    final_check_out = existing_record.check_out_time
+
+                                from datetime import time
                                 AttendanceRecord.objects.update_or_create(
                                     employee_name=ma_req.employee.full_name,
                                     date=current_date,
                                     defaults={
                                         'check_in_time': ma_req.check_in_time,
-                                        'check_out_time': ma_req.check_out_time,
-                                        'status': 'Present'
+                                        'check_out_time': final_check_out,
+                                        'status': 'Late' if current_date == ma_req.start_date and ma_req.check_in_time > time(9, 30, 0) else 'Present'
                                     }
                                 )
                                 current_date += timedelta(days=1)
