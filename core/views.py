@@ -1227,6 +1227,14 @@ class UserCreateView(TemplateView):
                 )
             return redirect(f'/users/create/?uid={uid}')
 
+        elif action == 'delete_document':
+            document_id = request.POST.get('document_id')
+            active_role_upper = request.session.get('active_role', '').upper()
+            if active_role_upper in ['CEO', 'COO'] and document_id:
+                from .models import StaffDocument
+                StaffDocument.objects.filter(id=document_id).delete()
+            return redirect(f'/users/create/?uid={uid}')
+
         return redirect('/users/create/')
 
 from .models import Notice, LeaveRequest

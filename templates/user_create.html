@@ -463,9 +463,22 @@
                                     <p class="text-[10px] text-on-surface-variant font-data-mono">{{ doc.uploaded_at|date:"M d, Y" }}</p>
                                 </div>
                             </div>
-                            <a href="{{ doc.file.url }}" target="_blank" class="text-[10px] font-label-caps text-primary border border-primary/30 px-3 py-1.5 rounded text-center hover:bg-primary/10 transition-colors uppercase tracking-wider">
-                                View Document
-                            </a>
+                            <div class="flex gap-2">
+                                <a href="{{ doc.file.url }}" target="_blank" class="flex-1 text-[10px] font-label-caps text-primary border border-primary/30 px-3 py-1.5 rounded flex items-center justify-center hover:bg-primary/10 transition-colors uppercase tracking-wider">
+                                    View
+                                </a>
+                                {% if request.session.active_role|upper == 'CEO' or request.session.active_role|upper == 'COO' %}
+                                <form method="POST" action="" onsubmit="return confirm('Are you sure you want to delete this document?');" class="flex">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_document">
+                                    <input type="hidden" name="uid" value="{{ selected_user.uid }}">
+                                    <input type="hidden" name="document_id" value="{{ doc.id }}">
+                                    <button type="submit" class="text-[10px] font-label-caps text-error border border-error/30 px-3 py-1.5 rounded flex items-center justify-center hover:bg-error/10 transition-colors uppercase tracking-wider" title="Delete Document">
+                                        <span class="material-symbols-outlined text-[16px]">delete</span>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
                         </div>
                         {% empty %}
                         <div class="col-span-full p-8 border border-dashed border-outline-variant rounded-lg text-center text-on-surface-variant">
