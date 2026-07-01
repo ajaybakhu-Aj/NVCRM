@@ -137,21 +137,21 @@
 </div>
 
 <!-- Create Lead Modal -->
-<div id="leadModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-    <div class="bg-surface-container border border-outline-variant w-full max-w-md p-6 rounded-xl shadow-2xl relative">
-        <div class="flex justify-between items-center border-b border-outline-variant pb-4 mb-4">
+<div id="leadModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-surface-container border border-outline-variant w-full max-w-md p-6 rounded-xl shadow-2xl relative flex flex-col max-h-full">
+        <div class="flex justify-between items-center border-b border-outline-variant pb-4 mb-4 shrink-0">
             <h3 class="font-headline-sm text-headline-sm text-primary flex items-center gap-2">
                 <span class="material-symbols-outlined">person_add</span>
                 ADD NEW LEAD
             </h3>
-            <button onclick="closeLeadModal()" class="material-symbols-outlined text-outline hover:text-primary transition-colors cursor-pointer">close</button>
+            <button type="button" onclick="closeLeadModal()" class="material-symbols-outlined text-outline hover:text-primary transition-colors cursor-pointer">close</button>
         </div>
         
-        <form method="POST" action="">
+        <form method="POST" action="" class="flex flex-col min-h-0 overflow-hidden">
             {% csrf_token %}
             <input type="hidden" name="action" value="create">
             
-            <div class="space-y-4 mb-6">
+            <div class="space-y-4 mb-6 overflow-y-auto pr-2">
                 <div>
                     <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Lead / Client Name</label>
                     <input type="text" name="lead_name" placeholder="e.g. Nepal Telecom" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded" required>
