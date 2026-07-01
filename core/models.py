@@ -98,31 +98,50 @@ class EmployeeProfile(models.Model):
 
 class ProcurementRequest(models.Model):
     TRACK_CHOICES = [
-        ('Local', 'Local'),
-        ('International', 'International'),
+        ('Local', 'Local Procurement'),
+        ('International', 'International Procurement'),
     ]
+    STATUS_CHOICES = [
+        ('Draft', 'Procurement Start'),
+        ('Pending_HR_COO', 'Review & Approve: HR & COO'),
+        ('Pending_CTO', 'Review & Decide: CTO'),
+        ('Pending_Amend', 'User Action: Amend Quantity'),
+        ('Execution', 'Procurement Execution'),
+        ('Pending_LCM', 'Post-Procurement: Integrate LCM'),
+        ('Pending_GRN', 'GRN Process & Inventory Intake'),
+        ('Completed', 'Process End'),
+        ('Closed', 'Requisition Closed (Denied)'),
+    ]
+    
     title = models.CharField(max_length=255)
     track = models.CharField(max_length=20, choices=TRACK_CHOICES)
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Draft')
     supporting_document = models.FileField(upload_to='procurement_docs/', null=True, blank=True)
     
-    # New Fields
+    # Requisition Details
+    product_sku = models.CharField(max_length=100, default='UNKNOWN')
+    requested_quantity = models.IntegerField(default=1)
+    amended_quantity = models.IntegerField(null=True, blank=True)  # Populated via Amend loop
+    
+    # Financials & LCM
     landing_cost_management = models.DecimalField(max_digits=12, decimal_places=2, default=0.0)
     goods_receive_notes = models.CharField(max_length=255, blank=True, null=True)
     
-    # Signatures
-    cto_approved = models.BooleanField(default=False)
+    # Signatures & Segregation of Duties
+    submitted_by_uid = models.CharField(max_length=100, blank=True, null=True)
     hr_approved = models.BooleanField(default=False)
     coo_approved = models.BooleanField(default=False)
-    ceo_approved = models.BooleanField(default=False)
+    cto_approved = models.BooleanField(default=False)
 
-    # Actor Tracking for Segregation of Duties
-    submitted_by_uid = models.CharField(max_length=100, blank=True, null=True)
-    hr_approver_uid = models.CharField(max_length=100, blank=True, null=True)
-    cto_approver_uid = models.CharField(max_length=100, blank=True, null=True)
-    coo_approver_uid = models.CharField(max_length=100, blank=True, null=True)
-    ceo_approver_uid = models.CharField(max_length=100, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
-    is_terminal = models.BooleanField(default=False)
+class ProcurementItem(models.Model):
+    """Tracks serially integrated products mapped dynamically to specific sub-inventory slots."""
+    request = models.ForeignKey(ProcurementRequest, on_delete=models.CASCADE, related_name='serialized_items')
+    serial_number = models.CharField(max_length=100, unique=True)
+    locator = models.CharField(max_length=50) # 'FRESH', 'DAMAGE', 'BASIADE'
+    is_integrated = models.BooleanField(default=False)
 
 class CalendarEvent(models.Model):
     title = models.CharField(max_length=255)
@@ -160,6 +179,7 @@ class LeaveRequest(models.Model):
         ('Annual', 'Annual Leave'),
         ('Maternity', 'Maternity Leave'),
         ('Paternity', 'Paternity Leave'),
+        ('Mourning', 'Mourning Leave'),
     ]
     STATUS_CHOICES = [
         ('Pending', 'Pending'),
@@ -388,3 +408,84 @@ class ExpenseRecord(models.Model):
 
     def __str__(self):
         return f"{self.title} - Rs. {self.amount}"
+
+class PayrollCycle(models.Model):
+    """Tracks the state of a monthly payroll cycle (Nepali Calendar)."""
+    np_year = models.IntegerField()
+    np_month = models.IntegerField()
+    is_finalized = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('np_year', 'np_month')
+
+    def __str__(self):
+        return f"Cycle: {self.np_year}-{self.np_month} ({'Frozen' if self.is_finalized else 'Draft'})"
+
+class PayrollRecord(models.Model):
+    """Stores the calculated breakdown for an employee for a specific cycle."""
+    cycle = models.ForeignKey(PayrollCycle, on_delete=models.CASCADE, related_name='records')
+    employee = models.ForeignKey('SystemUserProfile', on_delete=models.CASCADE)
+    
+    # Day Classifications
+    present_days = models.IntegerField(default=0)
+    weekends = models.IntegerField(default=0)
+    holidays = models.IntegerField(default=0)
+    paid_leaves = models.IntegerField(default=0)
+    unpaid_leaves = models.IntegerField(default=0)
+    total_paid_days = models.IntegerField(default=0)
+    
+    # Financials
+    gross_salary = models.DecimalField(max_digits=12, decimal_places=2, default=0.0)
+    deductions = models.DecimalField(max_digits=12, decimal_places=2, default=0.0)
+    net_payable = models.DecimalField(max_digits=12, decimal_places=2, default=0.0)
+
+class MoveOrder(models.Model):
+    STATUS_CHOICES = [
+        ('Draft', 'Draft'),
+        ('In_Transit', 'Execute Move Order: In-Transit'),
+        ('Goods_Verified', 'Goods Verified'),
+        ('Issue_Report', 'Issue Report Generated'),
+        ('Completed', 'Completed - Stock Adjusted'),
+    ]
+    
+    LOCATOR_CHOICES = [
+        ('Fresh', 'FRESH'),
+        ('Damaged', 'DAMAGE'),
+        ('Refurbished', 'REFURBISHED'),
+        ('Repairable', 'REPAIRABLE'),
+    ]
+    
+    order_number = models.CharField(max_length=50, unique=True)
+    
+    # 1. Bi-directional Origin/Destination
+    source_node = models.ForeignKey('OrgNode', on_delete=models.CASCADE, related_name='outbound_transfers')
+    destination_node = models.ForeignKey('OrgNode', on_delete=models.CASCADE, related_name='inbound_transfers')
+    
+    sku_id = models.CharField(max_length=100)
+    quantity = models.IntegerField(validators=[MinValueValidator(1)])
+    
+    # 2. Enforce Required Stock Locators
+    locator_type = models.CharField(max_length=20, choices=LOCATOR_CHOICES)
+    
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Draft')
+    
+    # 3. Icon-driven Checklist Verifications
+    checklist_driver_assigned = models.BooleanField(default=False)
+    checklist_vehicle_secured = models.BooleanField(default=False)
+    checklist_documents_printed = models.BooleanField(default=False)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        """Enforce strict HQ <-> Dealer bi-directional logic."""
+        from django.core.exceptions import ValidationError
+        if self.source_node.node_type == 'HQ' and self.destination_node.node_type == 'HQ':
+            raise ValidationError("Invalid Transfer: HQ cannot transfer directly to HQ.")
+        if self.source_node.node_type != 'HQ' and self.destination_node.node_type != 'HQ':
+            raise ValidationError("Invalid Transfer: Dealer-to-Dealer transfers are restricted. Must be HQ <-> Dealer.")
+            
+    @property
+    def is_checklist_complete(self):
+        return self.checklist_driver_assigned and self.checklist_vehicle_secured and self.checklist_documents_printed

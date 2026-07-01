@@ -15,15 +15,13 @@ def pending_approvals(request):
         pending_leaves = 0
     
     # Calculate pending procurements based on specific approval tracks
-    pending_procurements = ProcurementRequest.objects.filter(is_terminal=False)
+    pending_procurements = ProcurementRequest.objects.exclude(status__in=['Completed', 'Closed'])
     if active_role == 'HR':
-        pending_procurements = pending_procurements.filter(hr_approved=False)
+        pending_procurements = pending_procurements.filter(status='Pending_HR_COO', track='Local')
     elif active_role == 'CTO':
-        pending_procurements = pending_procurements.filter(hr_approved=True, cto_approved=False)
+        pending_procurements = pending_procurements.filter(status='Pending_CTO', track='International')
     elif active_role == 'COO':
-        pending_procurements = pending_procurements.filter(cto_approved=True, coo_approved=False)
-    elif active_role == 'CEO':
-        pending_procurements = pending_procurements.filter(coo_approved=True, ceo_approved=False)
+        pending_procurements = pending_procurements.filter(status='Pending_HR_COO', track='Local')
     else:
         pending_procurements = pending_procurements.none()
         

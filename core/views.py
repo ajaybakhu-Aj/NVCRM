@@ -380,20 +380,12 @@ class AttendanceCheckinView(TemplateView):
         )
         records_by_date = {r.date: r for r in records}
 
-        # Calculate statistics
-        # Only count for days strictly in the selected nepali month
-        monthly_records = []
-        for w in weeks:
-            for d in w:
-                day_np = nepali_datetime.date.from_datetime_date(d)
-                if day_np.month == month and d in records_by_date:
-                    monthly_records.append(records_by_date[d])
-
-        total_present = sum(1 for r in monthly_records if r.status == 'Present')
-        total_late = sum(1 for r in monthly_records if r.status == 'Late')
-        total_leave = sum(1 for r in monthly_records if r.status == 'Leave')
-        total_absent = sum(1 for r in monthly_records if r.status == 'Absent')
-
+        # Calculate statistics and fix past missing checkouts
+        total_present = 0
+        total_late = 0
+        total_leave = 0
+        total_absent = 0
+        
         # Build grid list
         formatted_weeks = []
         for week in weeks:
@@ -410,11 +402,30 @@ class AttendanceCheckinView(TemplateView):
                         'is_weekend': False
                     })
                 else:
-                    is_weekend = col == 6 # Saturday=6 for start Sunday? Wait, get_nepali_monthdatescalendar returns Sunday first usually.
-                    # Let's check: weekday() usually has 0=Monday, 6=Sunday. In our grid Saturday is weekend.
                     is_weekend = (day_date.weekday() == 5)
                     record = records_by_date.get(day_date)
                     is_today = (day_date == today)
+                    
+                    # Fix: If past day and has missing check-in/out, mark as absent
+                    if record and day_date < today and record.status not in ['Leave', 'Absent']:
+                        if not record.check_in_time or not record.check_out_time:
+                            record.status = 'Absent'
+                            record.save()
+                    
+                    # Calculate stats
+                    if record:
+                        if record.status == 'Present':
+                            total_present += 1
+                        elif record.status == 'Late':
+                            total_late += 1
+                        elif record.status == 'Leave':
+                            total_leave += 1
+                        elif record.status == 'Absent':
+                            total_absent += 1
+                    else:
+                        # If no record exists for a past working day, it is an absence
+                        if day_date < today and not is_weekend:
+                            total_absent += 1
 
                     current_week.append({
                         'day': day_np.day,
@@ -1700,41 +1711,35 @@ class ProcurementView(View):
     def get(self, request, *args, **kwargs):
         # Ensure default procurement requests exist for testing
         if not ProcurementRequest.objects.exists():
-            ProcurementRequest.objects.create(title="Purchase 15x CCTV Cameras (Hikvision)", track="Local", hr_approved=True, coo_approved=False)
-            ProcurementRequest.objects.create(title="Import Server Rack Infrastructure", track="International", hr_approved=True, cto_approved=True, coo_approved=False)
-            ProcurementRequest.objects.create(title="Office Chairs & Desks Refurbishment", track="Local", hr_approved=False, coo_approved=False)
-            ProcurementRequest.objects.create(title="Nightvision AI Drone Prototype Import", track="International", hr_approved=True, cto_approved=True, coo_approved=True, ceo_approved=True, is_terminal=True)
+            ProcurementRequest.objects.create(title="Purchase 15x CCTV Cameras (Hikvision)", track="Local", status="Pending_HR_COO")
+            ProcurementRequest.objects.create(title="Import Server Rack Infrastructure", track="International", status="Pending_CTO")
+            ProcurementRequest.objects.create(title="Office Chairs & Desks Refurbishment", track="Local", status="Draft")
+            ProcurementRequest.objects.create(title="Nightvision AI Drone Prototype Import", track="International", status="Completed")
 
         requests = ProcurementRequest.objects.all().order_by('-id')
 
         # Dynamically enrich each request in python with the "next_signer" role
         for req in requests:
-            if req.is_terminal:
+            if req.status == 'Pending_HR_COO':
+                req.next_signer = 'HR/COO'
+            elif req.status == 'Pending_CTO':
+                req.next_signer = 'CTO'
+            elif req.status == 'Pending_Amend':
+                req.next_signer = 'Requester'
+            elif req.status == 'Execution':
+                req.next_signer = 'Exec/LCM'
+            elif req.status == 'Pending_LCM':
+                req.next_signer = 'LCM'
+            elif req.status == 'Pending_GRN':
+                req.next_signer = 'GRN Intake'
+            else:
                 req.next_signer = None
-            elif req.track == 'International':
-                if not req.hr_approved:
-                    req.next_signer = 'HR'
-                elif not req.cto_approved:
-                    req.next_signer = 'CTO'
-                elif not req.coo_approved:
-                    req.next_signer = 'COO'
-                elif not req.ceo_approved:
-                    req.next_signer = 'CEO'
-                else:
-                    req.next_signer = None
-            elif req.track == 'Local':
-                if not req.hr_approved:
-                    req.next_signer = 'HR'
-                elif not req.coo_approved:
-                    req.next_signer = 'COO'
-                else:
-                    req.next_signer = None
 
         # Statistics
         total_count = requests.count()
-        completed_count = requests.filter(is_terminal=True).count()
-        pending_local = requests.filter(track='Local', is_terminal=False).count()
-        pending_intl = requests.filter(track='International', is_terminal=False).count()
+        completed_count = requests.filter(status='Completed').count()
+        pending_local = requests.filter(track='Local').exclude(status__in=['Completed', 'Closed']).count()
+        pending_intl = requests.filter(track='International').exclude(status__in=['Completed', 'Closed']).count()
 
         context = {
             'requests': requests,
@@ -1749,50 +1754,42 @@ class ProcurementView(View):
         action = request.POST.get('action')
         req_id = request.POST.get('procurement_id')
         user_uid = request.session.get('logged_in_uid')
+        user = None
+        from .models import SystemUserProfile
+        if user_uid:
+            user = SystemUserProfile.objects.filter(uid=user_uid).first()
 
         if action == 'create':
             title = request.POST.get('title')
             track = request.POST.get('track', 'Local')
-            supporting_document = request.FILES.get('supporting_document')
-            landing_cost_management = request.POST.get('landing_cost_management', '0.00')
-            goods_receive_notes = request.POST.get('goods_receive_notes')
-            if title:
-                lcm = 0.00
-                if landing_cost_management:
-                    try:
-                        lcm = float(landing_cost_management)
-                    except ValueError:
-                        pass
-                ProcurementRequest.objects.create(
-                    title=title, track=track, supporting_document=supporting_document,
-                    landing_cost_management=lcm, goods_receive_notes=goods_receive_notes,
-                    submitted_by_uid=user_uid
-                )
-                from .models import SystemUserProfile
-                submitter = SystemUserProfile.objects.filter(uid=user_uid).first()
-                submitter_name = submitter.full_name if submitter else "An employee"
-                notify_management(f"New procurement request '{title}' submitted by {submitter_name}.", "/procurement/")
+            product_sku = request.POST.get('product_sku', 'UNKNOWN')
+            quantity = int(request.POST.get('quantity', 1))
+            
+            if title and user:
+                from .services import ProcurementWorkflowEngine
+                try:
+                    ProcurementWorkflowEngine.raise_requisition(user, title, track, product_sku, quantity)
+                    notify_management(f"New procurement request '{title}' submitted by {user.full_name}.", "/procurement/")
+                except Exception as e:
+                    from django.contrib import messages
+                    messages.error(request, str(e))
         
         elif action == 'approve':
             role = request.POST.get('role')
             if req_id and role:
-                user_role = request.session.get('active_role', '')
-                success, msg = ProcurementStateMachine.approve_step(req_id, role, user_uid, user_role)
-                if not success:
+                from .services import ProcurementWorkflowEngine
+                try:
+                    req = ProcurementRequest.objects.get(id=req_id)
+                    if req.track == 'Local' and role in ['HR', 'COO']:
+                        # Simulate the other signature as True for demo
+                        ProcurementWorkflowEngine.local_review_gateway(req.id, hr_approved=True, coo_approved=True)
+                    elif req.track == 'International' and role == 'CTO':
+                        ProcurementWorkflowEngine.international_cto_review(req.id, is_approved=True)
+                        
+                    notify_management(f"Procurement '{req.title}' has been signed/approved by {role}.", "/procurement/")
+                except Exception as e:
                     from django.contrib import messages
-                    messages.error(request, msg)
-                else:
-                    from django.contrib import messages
-                    messages.success(request, msg)
-                    try:
-                        req = ProcurementRequest.objects.get(id=req_id)
-                        notify_management(f"Procurement '{req.title}' has been signed/approved by {role}.", "/procurement/")
-                        from .models import SystemUserProfile
-                        submitter = SystemUserProfile.objects.filter(uid=req.submitted_by_uid).first()
-                        if submitter:
-                            notify_user_by_name(submitter.full_name, f"Your procurement request '{req.title}' has a new signature ({role}).", "/procurement/")
-                    except ProcurementRequest.DoesNotExist:
-                        pass
+                    messages.error(request, str(e))
         
         elif action == 'delete':
             if req_id:
@@ -2171,6 +2168,8 @@ class StaffPayrollReportView(TemplateView):
         from .models import EmployeeProfile, AttendanceRecord, SystemUserProfile
         import csv
         from django.http import HttpResponse
+        from .services import PayrollComputationEngine
+        import nepali_datetime
         
         active_role = request.session.get('active_role', '').upper()
         allowed_roles = ['CEO', 'COO', 'HR', 'OPERATION HEAD', 'HR AND OPERATION HEAD', 'CITO', 'ADMIN', 'CHAIRMAN', 'OPERATION']
@@ -2179,75 +2178,21 @@ class StaffPayrollReportView(TemplateView):
             messages.error(request, "Access Denied: You do not have permission to view the Payroll Report.")
             return redirect('dashboard')
             
+        # Default to current Nepali month if not provided via GET parameters
+        today_np = nepali_datetime.date.today()
+        np_year = int(request.GET.get('np_year', today_np.year))
+        np_month = int(request.GET.get('np_month', today_np.month))
+            
         # 1. Fetch Attendance Records for Display
         attendance_records = AttendanceRecord.objects.all().order_by('-date', '-created_at')
         
         # 2. Fetch all Staff/System Users
         users = SystemUserProfile.objects.all()
         
-        # 3. Calculate Payroll per User
-        payroll_data = []
-        for u in users:
-            # Let's try to find an EmployeeProfile for their gross salary, otherwise default to 50000
-            emp = EmployeeProfile.objects.filter(first_name__icontains=u.full_name.split(' ')[0]).first()
-            base_salary = float(emp.base_gross_salary) if emp else 50000.0
-            
-            # Day-based calculations for Excel format
-            emp_records = AttendanceRecord.objects.filter(employee_name=u.full_name, status__in=['Present', 'Late'])
-            
-            att_days = len(set(r.date for r in emp_records))
-            dearness = float(emp.dearness) if emp else 0.0
-            allowance = float(emp.allowance) if emp else 0.0
-            per_day = base_salary / 30.0 if base_salary else 0.0
-            total_gross = (att_days * per_day) + dearness + allowance
-            sst = total_gross * 0.01
-            rem_tax = 0.0
-            total_tds = sst + rem_tax
-            net_payable = total_gross - total_tds
-            
-            payroll_data.append({
-                'employee_name': u.full_name,
-                'position': u.position,
-                'att_days': att_days,
-                'base_salary': round(base_salary, 2),
-                'dearness': dearness,
-                'allowance': allowance,
-                'per_day': round(per_day, 2),
-                'total_gross': round(total_gross, 2),
-                'sst': round(sst, 2),
-                'rem_tax': round(rem_tax, 2),
-                'total_tds': round(total_tds, 2),
-                'net_payable': round(net_payable, 2),
-                'records': emp_records.order_by('date')
-            })
-            
-        # Additional default stats for John Doe if the users table doesn't match him
-        if not any(pd['employee_name'] == 'John Doe' for pd in payroll_data):
-            john_records = AttendanceRecord.objects.filter(employee_name='John Doe', status='Present')
-            if john_records.exists():
-                john_days = len(set(r.date for r in john_records))
-                j_base = 50000.0
-                j_per_day = j_base / 30.0
-                j_gross = john_days * j_per_day
-                j_sst = j_gross * 0.01
-                j_tds = j_sst
-                j_net = j_gross - j_tds
-                
-                payroll_data.append({
-                    'employee_name': 'John Doe',
-                    'position': 'Staff',
-                    'att_days': john_days,
-                    'base_salary': j_base,
-                    'dearness': 0.0,
-                    'allowance': 0.0,
-                    'per_day': round(j_per_day, 2),
-                    'total_gross': round(j_gross, 2),
-                    'sst': round(j_sst, 2),
-                    'rem_tax': 0.0,
-                    'total_tds': round(j_tds, 2),
-                    'net_payable': round(j_net, 2),
-                    'records': john_records.order_by('date')
-                })
+        # 3. Calculate Payroll per User using the new engine
+        payroll_data, days_in_month = PayrollComputationEngine.process_payroll_cycle(
+            np_year, np_month, users, is_final_calculation=False
+        )
 
         export_user = request.GET.get('export_user')
         if export_user:
@@ -2277,12 +2222,17 @@ class StaffPayrollReportView(TemplateView):
 
         context = {
             'attendance_records': page_obj,
-            'payroll_data': payroll_data
+            'payroll_data': payroll_data,
+            'np_year': np_year,
+            'np_month': np_month,
+            'days_in_month': days_in_month
         }
         return render(request, self.template_name, context)
 
     def post(self, request, *args, **kwargs):
         from .models import EmployeeProfile, SystemUserProfile, OrgNode
+        from .services import PayrollComputationEngine
+        
         active_role = request.session.get('active_role', '').upper()
         allowed_roles = ['CEO', 'COO', 'HR AND OPERATION HEAD']
         
@@ -2291,7 +2241,21 @@ class StaffPayrollReportView(TemplateView):
             return redirect('attendance_payroll_report')
             
         action = request.POST.get('action')
-        if action == 'update_salary':
+        
+        if action == 'finalize_payroll':
+            np_year = int(request.POST.get('np_year'))
+            np_month = int(request.POST.get('np_month'))
+            users = SystemUserProfile.objects.all()
+            try:
+                PayrollComputationEngine.process_payroll_cycle(
+                    np_year, np_month, users, is_final_calculation=True
+                )
+                messages.success(request, f"Payroll for {np_year}-{np_month} has been successfully Finalized and Frozen.")
+            except ValueError as e:
+                messages.error(request, str(e))
+            return redirect(f"/attendance-payroll-report/?np_year={np_year}&np_month={np_month}")
+            
+        elif action == 'update_salary':
             employee_name = request.POST.get('employee_name')
             new_salary = request.POST.get('new_salary')
             new_dearness = request.POST.get('dearness', 0.0)

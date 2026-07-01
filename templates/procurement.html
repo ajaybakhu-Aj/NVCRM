@@ -66,10 +66,6 @@
                 <th>Status</th>
                 <th>LCM</th>
                 <th>GRN</th>
-                <th>HR Approved</th>
-                <th>CTO Approved</th>
-                <th>COO Approved</th>
-                <th>CEO Approved</th>
             </tr>
         </thead>
         <tbody>
@@ -78,13 +74,9 @@
                 <td>{{ req.id }}</td>
                 <td>{{ req.title }}</td>
                 <td>{{ req.track }}</td>
-                <td>{% if req.is_terminal %}Approved{% else %}Pending{% endif %}</td>
+                <td>{{ req.status }}</td>
                 <td>{{ req.landing_cost_management }}</td>
                 <td>{{ req.goods_receive_notes }}</td>
-                <td>{{ req.hr_approved }}</td>
-                <td>{{ req.cto_approved }}</td>
-                <td>{{ req.coo_approved }}</td>
-                <td>{{ req.ceo_approved }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -108,13 +100,13 @@
                             <span class="bg-warning/10 text-warning border border-warning/20 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase">International Track</span>
                         {% endif %}
                         
-                        {% if req.is_terminal %}
+                        {% if req.status == 'Completed' %}
                             <span class="bg-success/15 text-success border border-success/30 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase flex items-center gap-1">
-                                <span class="material-symbols-outlined text-[10px] font-bold">check_circle</span> APPROVED / TERMINAL
+                                <span class="material-symbols-outlined text-[10px] font-bold">check_circle</span> COMPLETED
                             </span>
                         {% else %}
                             <span class="bg-info/10 text-info border border-info/20 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase flex items-center gap-1 animate-pulse">
-                                <span class="material-symbols-outlined text-[10px]">pending</span> PROCESSING
+                                <span class="material-symbols-outlined text-[10px]">pending</span> {{ req.status|upper }}
                             </span>
                         {% endif %}
 
@@ -136,104 +128,31 @@
 
                 <!-- Signatures Workflow Progress -->
                 <div class="flex flex-wrap items-center gap-3 bg-background/40 p-3 rounded-lg border border-outline-variant/50 max-w-full">
-                    <!-- Step 1: HR -->
-                    <div class="flex items-center gap-1.5">
-                        {% if req.hr_approved %}
-                            <div class="bg-success/20 text-success border border-success/30 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1">
-                                <span class="material-symbols-outlined text-[11px] font-bold">check</span> HR
-                            </div>
-                        {% elif req.next_signer == 'HR' %}
-                            <form method="POST" action="" class="inline">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="approve">
-                                <input type="hidden" name="procurement_id" value="{{ req.id }}">
-                                <input type="hidden" name="role" value="HR">
-                                <button type="submit" class="bg-warning text-on-warning hover:bg-warning-dark px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 border border-warning/30 hover:scale-95 transition-all cursor-pointer animate-pulse">
-                                    <span class="material-symbols-outlined text-[11px] font-bold">draw</span> SIGN HR
-                                </button>
-                            </form>
-                        {% else %}
-                            <div class="bg-surface-variant text-outline border border-outline-variant px-2 py-1 rounded text-[10px] font-medium flex items-center gap-1 opacity-50">
-                                <span class="material-symbols-outlined text-[11px]">lock</span> HR
-                            </div>
-                        {% endif %}
-                    </div>
+                    
+                    {% if req.next_signer %}
+                        <form method="POST" action="" class="inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="approve">
+                            <input type="hidden" name="procurement_id" value="{{ req.id }}">
+                            <input type="hidden" name="role" value="{{ req.next_signer }}">
+                            <button type="submit" class="bg-warning text-on-warning hover:bg-warning-dark px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 border border-warning/30 hover:scale-95 transition-all cursor-pointer animate-pulse">
+                                <span class="material-symbols-outlined text-[11px] font-bold">draw</span> SIGN / APPROVE ({{ req.next_signer }})
+                            </button>
+                        </form>
+                    {% endif %}
 
-                    {% if req.track == 'International' %}
-                        <!-- Step 2: CTO (Intl only) -->
-                        <span class="text-outline text-xs">→</span>
-                        <div class="flex items-center gap-1.5">
-                            {% if req.cto_approved %}
-                                <div class="bg-success/20 text-success border border-success/30 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1">
-                                    <span class="material-symbols-outlined text-[11px] font-bold">check</span> CTO
-                                </div>
-                            {% elif req.next_signer == 'CTO' %}
-                                <form method="POST" action="" class="inline">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="approve">
-                                    <input type="hidden" name="procurement_id" value="{{ req.id }}">
-                                    <input type="hidden" name="role" value="CTO">
-                                    <button type="submit" class="bg-warning text-on-warning hover:bg-warning-dark px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 border border-warning/30 hover:scale-95 transition-all cursor-pointer animate-pulse">
-                                        <span class="material-symbols-outlined text-[11px] font-bold">draw</span> SIGN CTO
-                                    </button>
-                                </form>
-                            {% else %}
-                                <div class="bg-surface-variant text-outline border border-outline-variant px-2 py-1 rounded text-[10px] font-medium flex items-center gap-1 opacity-50">
-                                    <span class="material-symbols-outlined text-[11px]">lock</span> CTO
-                                </div>
-                            {% endif %}
+                    {% if req.status == 'Completed' %}
+                        <div class="bg-success/20 text-success border border-success/30 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[11px] font-bold">check_circle</span> WORKFLOW COMPLETED
+                        </div>
+                    {% endif %}
+                    
+                    {% if req.status == 'Closed' %}
+                        <div class="bg-error/20 text-error border border-error/30 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[11px] font-bold">cancel</span> WORKFLOW REJECTED
                         </div>
                     {% endif %}
 
-                    <!-- Step 3: COO -->
-                    <span class="text-outline text-xs">→</span>
-                    <div class="flex items-center gap-1.5">
-                        {% if req.coo_approved %}
-                            <div class="bg-success/20 text-success border border-success/30 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1">
-                                <span class="material-symbols-outlined text-[11px] font-bold">check</span> COO
-                            </div>
-                        {% elif req.next_signer == 'COO' %}
-                            <form method="POST" action="" class="inline">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="approve">
-                                <input type="hidden" name="procurement_id" value="{{ req.id }}">
-                                <input type="hidden" name="role" value="COO">
-                                <button type="submit" class="bg-warning text-on-warning hover:bg-warning-dark px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 border border-warning/30 hover:scale-95 transition-all cursor-pointer animate-pulse">
-                                    <span class="material-symbols-outlined text-[11px] font-bold">draw</span> SIGN COO
-                                </button>
-                            </form>
-                        {% else %}
-                            <div class="bg-surface-variant text-outline border border-outline-variant px-2 py-1 rounded text-[10px] font-medium flex items-center gap-1 opacity-50">
-                                <span class="material-symbols-outlined text-[11px]">lock</span> COO
-                            </div>
-                        {% endif %}
-                    </div>
-
-                    {% if req.track == 'International' %}
-                        <!-- Step 4: CEO (Intl only) -->
-                        <span class="text-outline text-xs">→</span>
-                        <div class="flex items-center gap-1.5">
-                            {% if req.ceo_approved %}
-                                <div class="bg-success/20 text-success border border-success/30 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1">
-                                    <span class="material-symbols-outlined text-[11px] font-bold">check</span> CEO
-                                </div>
-                            {% elif req.next_signer == 'CEO' %}
-                                <form method="POST" action="" class="inline">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="approve">
-                                    <input type="hidden" name="procurement_id" value="{{ req.id }}">
-                                    <input type="hidden" name="role" value="CEO">
-                                    <button type="submit" class="bg-warning text-on-warning hover:bg-warning-dark px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 border border-warning/30 hover:scale-95 transition-all cursor-pointer animate-pulse">
-                                        <span class="material-symbols-outlined text-[11px] font-bold">draw</span> SIGN CEO
-                                    </button>
-                                </form>
-                            {% else %}
-                                <div class="bg-surface-variant text-outline border border-outline-variant px-2 py-1 rounded text-[10px] font-medium flex items-center gap-1 opacity-50">
-                                    <span class="material-symbols-outlined text-[11px]">lock</span> CEO
-                                </div>
-                            {% endif %}
-                        </div>
-                    {% endif %}
                 </div>
 
                 <!-- Delete Option -->
@@ -274,24 +193,24 @@
                 <div>
                     <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Procurement Track</label>
                     <select name="track" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none cursor-pointer rounded">
-                        <option value="Local">Local (HR → COO)</option>
-                        <option value="International">International (HR → CTO → COO → CEO)</option>
+                        <option value="Local">Local</option>
+                        <option value="International">International</option>
                     </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Product SKU</label>
+                    <input type="text" name="product_sku" placeholder="e.g. CAM-HIK-001" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded" required>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Requested Quantity</label>
+                    <input type="number" name="quantity" placeholder="1" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded" required min="1">
                 </div>
 
                 <div>
                     <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Supporting Document (PDF, Image, etc.)</label>
                     <input type="file" name="supporting_document" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded">
-                </div>
-                
-                <div>
-                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Landing Cost Management (LCM)</label>
-                    <input type="number" step="0.01" name="landing_cost_management" placeholder="0.00" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded">
-                </div>
-                
-                <div>
-                    <label class="block text-[10px] text-outline font-label-caps uppercase tracking-wider mb-2">Goods Receive Notes (GRN)</label>
-                    <input type="text" name="goods_receive_notes" placeholder="e.g. GRN-2026-001" class="w-full bg-background border border-outline-variant px-3 py-2 font-body-sm text-on-surface focus:border-primary outline-none rounded">
                 </div>
             </div>
 
